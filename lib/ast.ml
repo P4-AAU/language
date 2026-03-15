@@ -42,7 +42,6 @@ type constant =
   | Cfloat16 of float
   | Cfloat32 of float
   | Cfloat64 of float
-  | Cfloat128 of float
   | Cchar of char
   | Cstring of string
   | Carray of constant list
