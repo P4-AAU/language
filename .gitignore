@@ -1,0 +1,13 @@
+.env
+.vscode
+_build/
+*.install
+.opam-switch/
+*.byte
+*.native
+*.merlin
+.merlin
+*.cmo
+*.cmi
+*.cmx
+*.o
