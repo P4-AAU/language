@@ -1,0 +1,7 @@
+services:
+  p4:
+    build: .
+    volumes:
+      - .:/app
+    working_dir: /app 
+    command: opam exec -- dune exec bin/main.exe
