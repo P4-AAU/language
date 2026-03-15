@@ -1,4 +1,4 @@
-(* Abstract Syntax of While Language. *)
+(* Abstract Syntax of our terribly designed language. *)
 
 (* Identifiers *)
 type location = Lexing.position * Lexing.position
