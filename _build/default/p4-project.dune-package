@@ -1,4 +1,0 @@
-(lang dune 3.21)
-(name p4-project)
-(sections (lib .) (bin ../../bin) (doc ../../doc/p4-project))
-(files (lib (META dune-package opam)) (bin (p4-project)) (doc (README.md)))
