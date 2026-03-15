@@ -39,8 +39,13 @@ type constant =
   | Cuint16 of int
   | Cuint32 of int
   | Cuint64 of int
+  | Cfloat16 of float
+  | Cfloat32 of float
+  | Cfloat64 of float
+  | Cfloat128 of float
+  | Cchar of char
   | Cstring of string
-  | Carray of constant
+  | Carray of constant list
 
 type expr =
   | Ecst of constant (* constant*)
