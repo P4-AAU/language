@@ -6,3 +6,6 @@ lib: [
 bin: [
   "_build/install/default/bin/p4-project"
 ]
+doc: [
+  "_build/install/default/doc/p4-project/README.md"
+]
