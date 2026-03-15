@@ -57,7 +57,7 @@ type expr =
   | Elen of expr
 
 type pattern =
-  | Pdefault (* default eller _ alt efter vi aftaler*)
+  | Pdefault (* default eller _ alt efter hvad vi aftaler*)
   | Pconst of constant
   | Pvar of ident
 
@@ -68,7 +68,7 @@ type stmt =
   | Sprint of expr list (* print a list of expressions*)
   | Swhile of expr * stmt
   | Sfor of stmt * expr * stmt * stmt (*assignment; condition; increment {body}*)
-  | Smatch of expr * (pattern * stmt) list (* match expression with a pattern and stmt*)
+  | Smatch of expr * (pattern * stmt) list (* match expression*)
   | Sindexset of expr * expr * expr
 
 type file = stmt
