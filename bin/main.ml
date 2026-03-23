@@ -1,1 +1,1 @@
-let () = Printf.printf "Hello\n"
+let x = 14
