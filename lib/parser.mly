@@ -29,30 +29,40 @@
 %%
 
 file:
-  | s = stmt EOF {s}
+  | b = block EOF {b}
+
+expr: 
+  | c = CST                           {Ecst c}
+  | id = ident                        {Eident id}
+  | MINUS e1 = expr %prec unary_minus {Eunop (Uneg, e1)}
+  | NOT e1 = expr                     {Eunop (Unot, e1)}
+  | e1 = expr o = binop e2 = expr     {Ebinop (o , e1, e2)}
+  | LP e = expr RP                    {e}
+
+block:
+  | s = nonempty_list(stmt) {Sblock s}
 
 stmt:
   | WHILE e = expr COLON s = stmt {Swhile (e, s)}
   | IF e = expr COLON s1 = stmt ELSE COLON s2 = stmt {Sif (e, s1, s2)}
   | PRINT LP args = separated_list(COMMA, expr) RP {Sprint args}
   | id = ident ASSIGN e = expr {Sassign (id, e)}
-  | s = nonempty_list(stmt) {Sblock s}
 
-expr: 
-  | c = CST                          {Ecst c}
-  | id = ident                       {Eident id}
-  | MINUS e = expr %prec unary_minus {Eunop (Uneg, e)}
-  | NOT e = expr                     {Eunop (Unot, e)}
-  | e1 = expr o = binop e2 = expr    {Ebinop (o , e1, e2)}
-  | LP e = expr RP                   {e}
 
 %inline binop:
-  | PLUS  { Badd } | MINUS { Bsub } | TIMES { Bmul }
-  | DIV   { Bdiv } | MOD   { Bmod }
-  | EQ    { Beq  } | NEQ   { Bneq }
-  | LT    { Blt  } | LE    { Ble  }
-  | GT    { Bgt  } | GE    { Bge  }
-  | AND   { Band } | OR    { Bor  }
+  | PLUS  { Badd } 
+  | MINUS { Bsub }
+  | TIMES { Bmul }
+  | DIV   { Bdiv } 
+  | MOD   { Bmod }
+  | EQ    { Beq  } 
+  | NEQ   { Bneq }
+  | LT    { Blt  } 
+  | LE    { Ble  }
+  | GT    { Bgt  } 
+  | GE    { Bge  }
+  | AND   { Band } 
+  | OR    { Bor  }
 
 ident:
   | id = IDENT { { loc = ($startpos, $endpos); id } }
