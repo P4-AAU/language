@@ -17,6 +17,7 @@ type binop =
   | Bmul
   | Bdiv
   | Bmod
+  | Bpow
   | Beq
   | Bneq
   | Blt
@@ -35,6 +36,8 @@ type expr =
   | Eunop of unop * expr
   | Ebinop of binop * expr * expr
   | Eident of ident
+  | Elist of expr list
+  | Efield of expr * ident
 
 type stmt =
   | Sif of expr * stmt * stmt
@@ -42,5 +45,9 @@ type stmt =
   | Sblock of stmt list
   | Sprint of expr list
   | Swhile of expr * stmt
+  | Sreturn of expr
+  | Sfunc of ident * ident list * stmt
+  | Sfor of ident * expr * stmt
+
 
 type file = stmt
