@@ -52,6 +52,7 @@ type expr =
   | Eident of ident
   | Earray of expr list
   | Eindex of expr * expr
+  | Eslice of expr * expr * expr
   | Elength of expr
 
 
