@@ -23,6 +23,7 @@
      "false",  CST (Cbool false);
      "return", RET;
      "function", FUNC;
+     "lengthof", LENGTHOF;
    ];
    fun s -> try Hashtbl.find h s with Not_found -> IDENT s
 }
@@ -34,6 +35,7 @@ let ident = (letter | '_') (letter | digit | '_')*
 let integer = '0' | ['1'-'9'] digit*
 let space = ' ' | '\t'
 let comment = "#" [^'\n']*
+
 
 
 rule token = parse
@@ -64,7 +66,6 @@ rule token = parse
  | ":"       {COLON}
  | ";"       {SEMI}
  | ","       {COMMA}
- | "."       {FACCESS}
  | eof       {EOF}
  | _ as c    {raise (Lexing_error (Printf.sprintf "unexpected character: %c" c))}
 
