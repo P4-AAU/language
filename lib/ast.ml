@@ -68,6 +68,10 @@ type stmt =
   | Sdefine of ident * typ * expr
   | Sassign_index of ident * expr * expr
   | Smatch of expr * (pattern * stmt) list
+  | Sbuffer of ident * typ * expr * expr list  
+  | Sdelete of ident                          
+  | Sinput of ident * typ                     
+  | Sforrange of ident * expr * expr * stmt    
 
 
 
