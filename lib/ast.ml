@@ -7,6 +7,14 @@ type ident =
   ; id : string
   }
 
+type typ =
+  | Tint8 | Tint16 | Tint32 | Tint64
+  | Tuint8 | Tuint16 | Tuint32 | Tuint64
+  | Tbool
+  | Tstring
+  | Tarray of typ
+
+
 type unop =
   | Uneg
   | Unot
@@ -28,16 +36,24 @@ type binop =
   | Bor
 
 type constant =
-  | Cbool of bool
   | Cint of int
+  | Cbool of bool
+  | Cstring of string
+
+type pattern =
+  | Pconst of constant
+  | Pident of ident
+  | Pwildcard
 
 type expr =
   | Ecst of constant
   | Eunop of unop * expr
   | Ebinop of binop * expr * expr
   | Eident of ident
-  | Elist of expr list
-  | Efield of expr * ident
+  | Earray of expr list
+  | Eindex of expr * expr
+  | Elength of expr
+
 
 type stmt =
   | Sif of expr * stmt * stmt
@@ -46,8 +62,12 @@ type stmt =
   | Sprint of expr list
   | Swhile of expr * stmt
   | Sreturn of expr
-  | Sfunc of ident * ident list * stmt
+  | Sfunc of ident * typ * (ident * typ) list * stmt
   | Sfor of ident * expr * stmt
+  | Sdefine of ident * typ * expr
+  | Sassign_index of ident * expr * expr
+  | Smatch of expr * (pattern * stmt) list
 
 
-type file = stmt
+
+type file = stmt list
