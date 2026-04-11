@@ -13,6 +13,7 @@ type typ =
   | Tbool
   | Tstring
   | Tarray of typ
+  | Tbuffer of typ * expr
 
 
 type unop =
