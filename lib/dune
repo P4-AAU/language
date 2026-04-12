@@ -1,2 +1,7 @@
 (library
  (name p4_project))
+(ocamllex
+ (modules lexer))
+
+(menhir
+ (modules parser))

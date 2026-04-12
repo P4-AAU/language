@@ -1,4 +1,3 @@
 (executable
- (public_name p4-project)
- (name main)
+ (public_name main)
  (libraries p4_project))
