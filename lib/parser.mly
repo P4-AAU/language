@@ -18,7 +18,7 @@
 /* Precedence - lavest øverst, højest nederst */
 %left OR
 %left AND
-/* %nonassoc NOT */
+%nonassoc NOT
 %nonassoc EQ NEQ LT LEQ GT GEQ
 %left PLUS MINUS
 %left TIMES DIV MOD
@@ -31,6 +31,9 @@
 file:
   | b = block EOF {b}
 
+type:
+   /* todo */ 
+   
 expr: 
   | c = CST                           {Ecst c}
   | id = ident                        {Eident id}
@@ -38,6 +41,8 @@ expr:
   | NOT e1 = expr                     {Eunop (Unot, e1)}
   | e1 = expr o = binop e2 = expr     {Ebinop (o , e1, e2)}
   | LP e = expr RP                    {e}
+  | /* "[" (expr ("," expr)∗)? "]" todo */
+  | /* "lengthof" "(" expr ")" todo */ 
 
 block:
   | LCURLY s = nonempty_list(stmt) RCURLY {Sblock s}
@@ -45,11 +50,11 @@ block:
 stmt:
   | DEFINE id = ident OF ty = type ASSIGN e = expr SEMI { Sdefine (id,ty,e) }
   | id = ident ASSIGN e = expr SEMI { Sassign (id ,e ) }
-  | id = ident LBT e1=expr RBT ASSIGN e2=expr SEMI {Sassign_index (id, e1 ,e2) }
-  | IF e = expr b1 = block ELSE LCURLY b2 = block {Sif (e, b1, b2)}
+  | id = ident LBT e1 = expr RBT ASSIGN e2=expr SEMI {Sassign_index (id, e1 ,e2) }
+  | IF e = expr b1 = block ELSE b2 = block {Sif (e, b1, b2)}
   | PRINT LP args = separated_list(COMMA, expr) RP {Sprint args}
-  | FOR id =ident IN e = expr b = block { Sfor (id, e, b) }
-  | FOR id = ident IN e1=expr TO e2 = expr b = block { Sforrange (id,e1,e2,b) }
+  | FOR id = ident IN e = expr b = block { Sfor (id, e, b) }
+  | FOR id = ident IN e1 = expr TO e2 = expr b = block { Sforrange (id,e1,e2,b) }
   | MATCH e = expr WITH cs = nonempty_list(match_case) SEMI {Smatch (e, cs)}
   | RETURN e = expr SEMI { Sreturn(e) }
   | b = block {Sblock b}
@@ -58,6 +63,15 @@ stmt:
 match_case:
    | ps = patterns ARROW s = stmt {(ps,s)}
 ;
+
+param:
+ /* todo */ 
+
+func_decl: 
+ /* todo */ 
+
+patterns:
+/* todo */ 
 
 
 
