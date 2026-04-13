@@ -62,7 +62,6 @@ type stmt =
   | Sassign of ident * expr
   | Sblock of stmt list
   | Sprint of expr list
-  | Swhile of expr * stmt
   | Sreturn of expr
   | Sfunc of ident * typ * (ident * typ) list * stmt
   | Sfor of ident * expr * stmt

@@ -14,14 +14,13 @@
    [
      "if",     IF;
      "else",   ELSE;
-     "while",  WHILE;
      "print",  PRINT;
      "and",    AND;
      "or",     OR;
      "not",    NOT;
      "true",   CST (Cbool true);
      "false",  CST (Cbool false);
-     "return", RET;
+     "return", RETURN;
      "function", FUNC;
      "lengthof", LENGTHOF;
    ];
@@ -53,14 +52,14 @@ rule token = parse
  | "=="      {EQ}
  | "!="      {NEQ}
  | "<"       {LT}
- | "<="      {LE}
+ | "<="      {LEQ}
  | ">"       {GT}
- | ">="      {GE}
+ | ">="      {GEQ}
  | "="       {ASSIGN}
  | "("       {LP}
  | ")"       {RP}
- | "{"       {LBE}
- | "}"       {RBE}
+ | "{"       {LCURLY}
+ | "}"       {RCURLY}
  | "["       {LBT}
  | "]"       {RBT}
  | ":"       {COLON}
