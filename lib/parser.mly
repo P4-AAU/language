@@ -15,6 +15,10 @@
 %token COLON COMMA SEMI FACCES ARROW
 /* %token BUFFER */
 %token EOF
+%token INT8 INT16 INT32 INT64
+%token UINT8 UINT16 UINT32 UINT64
+%token BOOL ARRAY STRING BUFFER
+%token LIFO FIFO
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
@@ -34,7 +38,21 @@ file:
 
 type:
    /* todo */ 
-   
+  | INT8 { Tint8 }
+  | INT16 { Tint16 }
+  | INT32 { Tint32 }
+  | INT64 { Tint64 }
+  | UINT8 { Tuint8 }
+  | UINT16 { Tuint16 }
+  | UINT32 { Tuint32 }
+  | UINT64 { Tuint64 }
+  | base = type LBT RBT { Tarray base }
+  | BOOL { Tbool }
+  | STRING { Tstring }
+  | FIFO LP elem_ty = type COMMA size = expr RP { Tbuffer (FIFO, elem_ty, size) }
+  | LIFO LP elem_ty = type COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }
+
+
 expr: 
   | c = CST                           {Ecst c}
   | id = ident                        {Eident id}
@@ -59,21 +77,29 @@ stmt:
   | MATCH e = expr WITH cs = nonempty_list(match_case) SEMI {Smatch (e, cs)}
   | RETURN e = expr SEMI { Sreturn(e) }
   | b = block {Sblock b}
+  | BUFFER name = ident COLON ty = type { Sbuffer (name, ty) }
 
 
 match_case:
-   | ps = patterns ARROW s = stmt {(ps,s)}
+  | ps = patterns ARROW s = stmt {(ps,s)}
 ;
 
 param:
- /* todo */ 
+ /* todo */
+  | id = ident OF ty = type { (id, ty) }
 
 func_decl: 
- /* todo */ 
+ /* todo */
+  | DEFINE ident OF type LP param COMMA param RP block
 
 patterns:
 /* todo */ 
-
+  | c = CST { Pconst c }
+  | id = ident {
+    if id.id = "_" then Pwildcard
+    else Pident id
+  }
+  | INT | BOOL | IDENT | STRING | '_'
 
 
 

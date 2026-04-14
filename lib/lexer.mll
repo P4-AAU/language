@@ -23,6 +23,22 @@
      "return", RETURN;
      "function", FUNC;
      "lengthof", LENGTHOF;
+     "define", DEFINE;
+     "of",     OF;
+     "int8",   INT8;
+     "int16",  INT16;
+     "int32",  INT32;
+     "int64",  INT64;
+     "uint8",  UINT8;
+     "uint16", UINT16;
+     "uint32", UINT32;
+     "uint64", UINT64;
+     "bool",   BOOL;
+     "string", STRING;
+     "array",  ARRAY;
+     "buffer", BUFFER;
+     "lifo",   LIFO;
+     "fifo",   FIFO;
    ];
    fun s -> try Hashtbl.find h s with Not_found -> IDENT s
 }

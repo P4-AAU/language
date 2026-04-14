@@ -7,13 +7,15 @@ type ident =
   ; id : string
   }
 
+type buffer_kind = FIFO | LIFO
+
 type typ =
   | Tint8 | Tint16 | Tint32 | Tint64
   | Tuint8 | Tuint16 | Tuint32 | Tuint64
   | Tbool
   | Tstring
   | Tarray of typ
-  | Tbuffer of typ * expr
+  | Tbuffer of buffer_kind * typ * expr
 
 
 type unop =
