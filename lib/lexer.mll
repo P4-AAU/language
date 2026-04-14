@@ -24,6 +24,8 @@
      "return", RET;
      "function", FUNC;
      "lengthof", LENGTHOF;
+     "match", MATCH; 
+     "for", FOR;
    ];
    fun s -> try Hashtbl.find h s with Not_found -> IDENT s
 }
