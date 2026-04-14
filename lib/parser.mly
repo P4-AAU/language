@@ -5,15 +5,14 @@
 %}
 
 %token <string> IDENT
-%token <Ast.constant> CST 
-%token DEFINE OF TO FOR IN IF ELSE PRINT MATCH WITH RETURN
+%token <Ast.constant> CST
+%token DEFINE OF TO FOR IN IF ELSE PRINT MATCH WITH RETURN LENGTHOF DELETE INPUT
 %token AND OR NOT
-%token PLUS MINUS TIMES DIV MOD
+%token PLUS MINUS TIMES DIV MOD POW
 %token EQ NEQ LT LEQ GT GEQ
 %token ASSIGN
 %token LP RP LCURLY RCURLY LBT RBT
 %token COLON COMMA SEMI FACCES ARROW
-/* %token BUFFER */
 %token EOF
 %token INT8 INT16 INT32 INT64
 %token UINT8 UINT16 UINT32 UINT64
@@ -27,6 +26,7 @@
 %nonassoc EQ NEQ LT LEQ GT GEQ
 %left PLUS MINUS
 %left TIMES DIV MOD
+%right POW
 %nonassoc unary_minus
 
 %start <Ast.file> file
@@ -34,10 +34,9 @@
 %%
 
 file:
-  | b = block EOF {b}
+  | b = block EOF { b }
 
-type:
-   /* todo */ 
+typ:
   | INT8 { Tint8 }
   | INT16 { Tint16 }
   | INT32 { Tint32 }
@@ -46,77 +45,75 @@ type:
   | UINT16 { Tuint16 }
   | UINT32 { Tuint32 }
   | UINT64 { Tuint64 }
-  | base = type LBT RBT { Tarray base }
+  | base = typ LBT RBT { Tarray base }
   | BOOL { Tbool }
   | STRING { Tstring }
-  | FIFO LP elem_ty = type COMMA size = expr RP { Tbuffer (FIFO, elem_ty, size) }
-  | LIFO LP elem_ty = type COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }
+  | FIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (FIFO, elem_ty, size) }
+  | LIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }
 
-
-expr: 
-  | c = CST                           {Ecst c}
-  | id = ident                        {Eident id}
-  | MINUS e1 = expr %prec unary_minus {Eunop (Uneg, e1)}
-  | NOT e1 = expr                     {Eunop (Unot, e1)}
-  | e1 = expr o = binop e2 = expr     {Ebinop (o , e1, e2)}
-  | LP e = expr RP                    {e}
-  | /* "[" (expr ("," expr)∗)? "]" todo */
-  | /* "lengthof" "(" expr ")" todo */ 
+expr:
+  | c = CST { Ecst c }
+  | id = ident { Eident id }
+  | MINUS e1 = expr %prec unary_minus { Eunop (Uneg, e1) }
+  | NOT e1 = expr { Eunop (Unot, e1) }
+  | e1 = expr o = binop e2 = expr { Ebinop (o, e1, e2) }
+  | e = expr LBT idx = expr RBT { Eindex (e, idx) }
+  | e = expr LBT s = expr COLON t = expr RBT { Eslice (e, s, t) }
+  | LBT es = separated_list(COMMA, expr) RBT { Earray es }
+  | LENGTHOF LP e = expr RP { Elength e }
+  | LP e = expr RP { e }
 
 block:
   | LCURLY s = nonempty_list(stmt) RCURLY {Sblock s}
 
 stmt:
-  | DEFINE id = ident OF ty = type ASSIGN e = expr SEMI { Sdefine (id,ty,e) }
-  | id = ident ASSIGN e = expr SEMI { Sassign (id ,e ) }
-  | id = ident LBT e1 = expr RBT ASSIGN e2=expr SEMI {Sassign_index (id, e1 ,e2) }
-  | IF e = expr b1 = block ELSE b2 = block {Sif (e, b1, b2)}
-  | PRINT LP args = separated_list(COMMA, expr) RP {Sprint args}
-  | FOR id = ident IN e = expr b = block { Sfor (id, e, b) }
-  | FOR id = ident IN e1 = expr TO e2 = expr b = block { Sforrange (id,e1,e2,b) }
-  | MATCH e = expr WITH cs = nonempty_list(match_case) SEMI {Smatch (e, cs)}
-  | RETURN e = expr SEMI { Sreturn(e) }
-  | b = block {Sblock b}
-  | BUFFER name = ident COLON ty = type { Sbuffer (name, ty) }
-
+  | DEFINE id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (id, ty, e) }
+  | id = ident ASSIGN e = expr SEMI { Sassign (id, e) }
+  | id = ident LBT e1 = expr RBT ASSIGN e2 = expr SEMI { Sassign_index (id, e1, e2) }
+  | IF e = expr b1 = block ELSE b2 = block { Sif (e, Sblock b1, Sblock b2) }
+  | PRINT LP args = separated_list(COMMA, expr) RP SEMI { Sprint args }
+  | FOR id = ident IN e = expr b = block { Sfor (id, e, Sblock b) }
+  | FOR id = ident IN e1 = expr TO e2 = expr b = block { Sforrange (id, e1, e2, Sblock b) }
+  | MATCH e = expr WITH cs = nonempty_list(match_case) SEMI { Smatch (e, cs) }
+  | RETURN e = expr SEMI { Sreturn e }
+  | INPUT id = ident COLON ty = typ SEMI { Sinput (id, ty) }
+  | DELETE id = ident SEMI { Sdelete id }
+  | f = func_decl { f }
+  | b = block { Sblock b }
+  | BUFFER name = ident COLON ty = typ ASSIGN size = expr SEMI { Sbuffer (name, ty, size, []) }
 
 match_case:
-  | ps = patterns ARROW s = stmt {(ps,s)}
-;
+  | ps = patterns ARROW s = stmt { (ps, s) }
 
 param:
- /* todo */
-  | id = ident OF ty = type { (id, ty) }
+  | id = ident OF ty = typ { (id, ty) }
 
-func_decl: 
- /* todo */
-  | DEFINE ident OF type LP param COMMA param RP block
+func_decl:
+  | DEFINE id = ident OF ret = typ LP params = separated_list(COMMA, param) RP body = block
+    { Sfunc (id, ret, params, Sblock body) }
 
 patterns:
-/* todo */ 
   | c = CST { Pconst c }
   | id = ident {
-    if id.id = "_" then Pwildcard
-    else Pident id
-  }
-  | INT | BOOL | IDENT | STRING | '_'
+      if id.id = "_" then Pwildcard
+      else Pident id
+    }
 
-
-
-%inline binop
+%inline binop:
   | PLUS  { Badd } 
   | MINUS { Bsub }
   | TIMES { Bmul }
-  | DIV   { Bdiv } 
-  | MOD   { Bmod }
-  | EQ    { Beq  } 
-  | NEQ   { Bneq }
-  | LT    { Blt  } 
-  | LE    { Ble  }
-  | GT    { Bgt  } 
-  | GE    { Bge  }
-  | AND   { Band } 
-  | OR    { Bor  }
+  | DIV { Bdiv }
+  | MOD { Bmod }
+  | POW { Bpow }
+  | EQ { Beq }
+  | NEQ { Bneq }
+  | LT { Blt }
+  | LEQ { Ble }
+  | GT { Bgt }
+  | GEQ { Bge }
+  | AND { Band }
+  | OR { Bor }
 
 ident:
   | id = IDENT { { loc = ($startpos, $endpos); id } }

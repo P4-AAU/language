@@ -21,8 +21,12 @@
      "true",   CST (Cbool true);
      "false",  CST (Cbool false);
      "return", RETURN;
-     "function", FUNC;
      "lengthof", LENGTHOF;
+    "match",  MATCH;
+    "with",   WITH;
+    "to",     TO;
+    "delete", DELETE;
+    "input",  INPUT;
      "define", DEFINE;
      "of",     OF;
      "int8",   INT8;
@@ -50,6 +54,7 @@ let ident = (letter | '_') (letter | digit | '_')*
 let integer = '0' | ['1'-'9'] digit*
 let space = ' ' | '\t'
 let comment = "#" [^'\n']*
+let str_char = [^ '"' '\\' '\n']
 
 
 
@@ -58,8 +63,10 @@ rule token = parse
  | comment   {token lexbuf}
  | '\n'      {new_line lexbuf; token lexbuf}
  | integer   {CST (Cint (int_of_string (lexeme lexbuf)))}
+ | '"' (str_char* as s) '"' {CST (Cstring s)}
  | ident     {id_or_kwg (lexeme lexbuf)}
  | "+"       {PLUS}
+ | "->"      {ARROW}
  | "-"       {MINUS}
  | "*"       {TIMES}
  | "/"       {DIV}
@@ -67,10 +74,10 @@ rule token = parse
  | "^"       {POW} 
  | "=="      {EQ}
  | "!="      {NEQ}
- | "<"       {LT}
  | "<="      {LEQ}
- | ">"       {GT}
  | ">="      {GEQ}
+ | "<"       {LT}
+ | ">"       {GT}
  | "="       {ASSIGN}
  | "("       {LP}
  | ")"       {RP}

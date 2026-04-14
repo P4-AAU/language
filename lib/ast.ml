@@ -9,15 +9,6 @@ type ident =
 
 type buffer_kind = FIFO | LIFO
 
-type typ =
-  | Tint8 | Tint16 | Tint32 | Tint64
-  | Tuint8 | Tuint16 | Tuint32 | Tuint64
-  | Tbool
-  | Tstring
-  | Tarray of typ
-  | Tbuffer of buffer_kind * typ * expr
-
-
 type unop =
   | Uneg
   | Unot
@@ -57,6 +48,14 @@ type expr =
   | Eindex of expr * expr
   | Eslice of expr * expr * expr
   | Elength of expr
+
+and typ =
+  | Tint8 | Tint16 | Tint32 | Tint64
+  | Tuint8 | Tuint16 | Tuint32 | Tuint64
+  | Tbool
+  | Tstring
+  | Tarray of typ
+  | Tbuffer of buffer_kind * typ * expr
 
 
 type stmt =
