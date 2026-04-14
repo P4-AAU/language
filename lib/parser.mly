@@ -12,7 +12,8 @@
 %token EQ NEQ LT LEQ GT GEQ
 %token ASSIGN
 %token LP RP LCURLY RCURLY LBT RBT
-%token COLON COMMA SEMI DOT ARROW
+%token COLON COMMA SEMI FACCES ARROW
+/* %token BUFFER */
 %token EOF
 
 /* Precedence - lavest øverst, højest nederst */
