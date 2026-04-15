@@ -64,7 +64,7 @@ expr:
   | LP e = expr RP { e }
 
 block:
-  | LCURLY s = nonempty_list(stmt) RCURLY {Sblock s}
+  | LCURLY s = nonempty_list(stmt) RCURLY { s }
 
 stmt:
   | DEFINE id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (id, ty, e) }
