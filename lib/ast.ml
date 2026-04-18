@@ -7,14 +7,7 @@ type ident =
   ; id : string
   }
 
-type typ =
-  | Tint8 | Tint16 | Tint32 | Tint64
-  | Tuint8 | Tuint16 | Tuint32 | Tuint64
-  | Tbool
-  | Tstring
-  | Tarray of typ
-  | Tbuffer of typ * expr
-
+type buffer_kind = FIFO | LIFO
 
 type unop =
   | Uneg
@@ -56,13 +49,20 @@ type expr =
   | Eslice of expr * expr * expr
   | Elength of expr
 
+and typ =
+  | Tint8 | Tint16 | Tint32 | Tint64
+  | Tuint8 | Tuint16 | Tuint32 | Tuint64
+  | Tbool
+  | Tstring
+  | Tarray of typ
+  | Tbuffer of buffer_kind * typ * expr
+
 
 type stmt =
   | Sif of expr * stmt * stmt
   | Sassign of ident * expr
   | Sblock of stmt list
   | Sprint of expr list
-  | Swhile of expr * stmt
   | Sreturn of expr
   | Sfunc of ident * typ * (ident * typ) list * stmt
   | Sfor of ident * expr * stmt

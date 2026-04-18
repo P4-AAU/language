@@ -14,18 +14,35 @@
    [
      "if",     IF;
      "else",   ELSE;
-     "while",  WHILE;
      "print",  PRINT;
      "and",    AND;
      "or",     OR;
      "not",    NOT;
      "true",   CST (Cbool true);
      "false",  CST (Cbool false);
-     "return", RET;
-     "function", FUNC;
+     "return", RETURN;
      "lengthof", LENGTHOF;
-     "match", MATCH; 
-     "for", FOR;
+    "match",  MATCH;
+    "with",   WITH;
+    "to",     TO;
+    "delete", DELETE;
+    "input",  INPUT;
+     "define", DEFINE;
+     "of",     OF;
+     "int8",   INT8;
+     "int16",  INT16;
+     "int32",  INT32;
+     "int64",  INT64;
+     "uint8",  UINT8;
+     "uint16", UINT16;
+     "uint32", UINT32;
+     "uint64", UINT64;
+     "bool",   BOOL;
+     "string", STRING;
+     "array",  ARRAY;
+     "buffer", BUFFER;
+     "lifo",   LIFO;
+     "fifo",   FIFO;
    ];
    fun s -> try Hashtbl.find h s with Not_found -> IDENT s
 }
@@ -37,6 +54,7 @@ let ident = (letter | '_') (letter | digit | '_')*
 let integer = '0' | ['1'-'9'] digit*
 let space = ' ' | '\t'
 let comment = "#" [^'\n']*
+let str_char = [^ '"' '\\' '\n']
 
 
 
@@ -45,8 +63,10 @@ rule token = parse
  | comment   {token lexbuf}
  | '\n'      {new_line lexbuf; token lexbuf}
  | integer   {CST (Cint (int_of_string (lexeme lexbuf)))}
+ | '"' (str_char* as s) '"' {CST (Cstring s)}
  | ident     {id_or_kwg (lexeme lexbuf)}
  | "+"       {PLUS}
+ | "->"      {ARROW}
  | "-"       {MINUS}
  | "*"       {TIMES}
  | "/"       {DIV}
@@ -54,15 +74,15 @@ rule token = parse
  | "^"       {POW} 
  | "=="      {EQ}
  | "!="      {NEQ}
+ | "<="      {LEQ}
+ | ">="      {GEQ}
  | "<"       {LT}
- | "<="      {LE}
  | ">"       {GT}
- | ">="      {GE}
  | "="       {ASSIGN}
  | "("       {LP}
  | ")"       {RP}
- | "{"       {LBE}
- | "}"       {RBE}
+ | "{"       {LCURLY}
+ | "}"       {RCURLY}
  | "["       {LBT}
  | "]"       {RBT}
  | ":"       {COLON}
