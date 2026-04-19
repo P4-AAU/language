@@ -31,6 +31,15 @@ let rec infer_expr env expr =
     (try Env.find id.id env
     with Not_found -> type_error (Printf.sprintf "unknown variable: %s" id.id))
     
+  | Eunop (op, e) ->
+    let t = infer_expr env e in
+    match (op, t) with
+    | (Uneg, t)
+    when is_int_type t -> t
+    | (Unot, t)
+    when t = Tbool -> Tbool
+    | _ -> type_error "invalid type"
+
   | Ebinop (op, e1, e2) ->
     let t1 = infer_expr env e1 in
     let t2 = infer_expr env e2 in
@@ -44,6 +53,8 @@ let rec infer_expr env expr =
     | ((Band | Bor), Tbool, Tbool) -> Tbool
     | _ -> type_error "invalid operand types for binary operator"
     end
+
+  | Earray ()
 
 (*Checks that the right types of expressions are used in statements and updates environment*)
 and check_stmt env stmt = 
