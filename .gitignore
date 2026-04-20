@@ -10,4 +10,6 @@ _build/
 *.cmo
 *.cmi
 *.cmx
-*.o 
+*.o
+.claude/
+CLAUDE.md
