@@ -247,7 +247,8 @@ and check_stmt env stmt =
         ignore (check_stmt env stmt)
     ) cases;
     env  
-      |Sassign_index _| Sbuffer _ | Sdelete _ | Sinput _ -> env  
+      |Sassign_index _| Sbuffer _ | Sdelete _ | Sinput _ -> 
+         type_error "expression type not implemented"
 
 
   let check_program stmts =
