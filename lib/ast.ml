@@ -14,6 +14,7 @@ type buffer_kind =
 type unop =
   | Uneg
   | Unot
+  | Usqrt
 
 type binop =
   | Badd

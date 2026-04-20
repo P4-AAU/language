@@ -13,6 +13,7 @@ let rec collect_vars_stmt acc = function
 let compile_unop = function
   | Uneg -> "-"
   | Unot -> "!"
+  | Usqrt -> "sqrt"
 ;;
 
 let compile_binop = function
@@ -41,17 +42,25 @@ let compile_typ = function
   | Tuint16 -> "uint16_t"
   | Tuint32 -> "uint32_t"
   | Tuint64 -> "uint64_t"
+  | Tbool -> "int8_t"
   | _ -> failwith "unsupported type"
 ;;
 
 let rec compile_expr buf = function
   | Ecst (Cint n) -> Buffer.add_string buf (string_of_int n)
+  | Ecst (Cbool b) -> Buffer.add_string buf (if b then "1" else "0")
   | Eident id -> Buffer.add_string buf id.id
   | Eunop (op, e) ->
     Buffer.add_string buf (compile_unop op);
     Buffer.add_char buf '(';
     compile_expr buf e;
     Buffer.add_char buf ')'
+  | Ebinop (Bpow, e1, e2) ->
+    Buffer.add_string buf "pow(";
+    compile_expr buf e1;
+    Buffer.add_string buf ", ";
+    compile_expr buf e2;
+    Buffer.add_string buf ")"
   | Ebinop (op, e1, e2) ->
     compile_expr buf e1;
     Buffer.add_char buf ' ';
@@ -133,7 +142,9 @@ let rec compile_stmt buf indent = function
 
 let compile (program : file) : string =
   let buf = Buffer.create 256 in
-  Buffer.add_string buf "#include <stdio.h>\n#include <stdint.h>\n\nint main(void)\n{\n";
+  Buffer.add_string
+    buf
+    "#include <stdio.h>\n#include <stdint.h>\n#include <math.h>\n\nint main(void)\n{\n";
   let vars = List.fold_left collect_vars_stmt [] program in
   List.iter
     (fun v -> Buffer.add_string buf (Printf.sprintf "  int %s = 0;\n" v))
