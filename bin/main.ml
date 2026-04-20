@@ -9,8 +9,8 @@ let () =
   try
     let ast = Parser.file Lexer.token lexbuf in
     close_in ic;
-    Printf.printf "Parsing Succesful\n";
-    ignore ast
+    let c_code = Codegen.compile ast in
+    print_string c_code
   with
   | Lexer.Lexing_error msg ->
     Printf.eprintf "Lexing error: %s\n" msg;

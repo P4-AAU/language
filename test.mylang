@@ -1,20 +1,9 @@
-x = 5
-y = 10
-z = x + y 
-
------------------------------------------------
-
-
-#include <stdio.h>
-
-int main(void) {
-    int x = 0;
-    int y = 0;
-    int z = 0;
-
-    x = 5
-    y = 10
-    z = x + y
-
-    return 0;
+{
+    define x of int32 = 3;
+    define y of int32 = 4;
+    if (x == y) {
+        print(x);
+    } else {
+        print(y);
+    }
 }
