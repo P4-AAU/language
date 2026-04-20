@@ -6,7 +6,13 @@ let rec collect_vars_stmt acc = function
   | Sassign (id, _) -> if List.mem id.id acc then acc else id.id :: acc
   | Sblock stmts -> List.fold_left collect_vars_stmt acc stmts
   | Sif (_, s1, s2) -> collect_vars_stmt (collect_vars_stmt acc s1) s2
+  | Smatch (_, cases) -> List.fold_left (fun a (_, s) -> collect_vars_stmt a s) acc cases
   | _ -> acc
+;;
+
+let compile_unop = function
+  | Uneg -> "-"
+  | Unot -> "!"
 ;;
 
 let compile_binop = function
@@ -21,6 +27,8 @@ let compile_binop = function
   | Ble -> "<="
   | Bgt -> ">"
   | Bge -> ">="
+  | Band -> "&&"
+  | Bor -> "||"
   | _ -> failwith "unsupported operator"
 ;;
 
@@ -39,8 +47,9 @@ let compile_typ = function
 let rec compile_expr buf = function
   | Ecst (Cint n) -> Buffer.add_string buf (string_of_int n)
   | Eident id -> Buffer.add_string buf id.id
-  | Eunop (Uneg, e) ->
-    Buffer.add_string buf "-(";
+  | Eunop (op, e) ->
+    Buffer.add_string buf (compile_unop op);
+    Buffer.add_char buf '(';
     compile_expr buf e;
     Buffer.add_char buf ')'
   | Ebinop (op, e1, e2) ->
@@ -95,6 +104,30 @@ let rec compile_stmt buf indent = function
        Buffer.add_string buf (String.make indent ' ');
        Buffer.add_string buf "else\n";
        compile_stmt buf indent else_)
+  | Smatch (e, cases) ->
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf "switch (";
+    compile_expr buf e;
+    Buffer.add_string buf ") {\n";
+    List.iter
+      (fun (pat, s) ->
+         Buffer.add_string buf (String.make indent ' ');
+         (match pat with
+          | Pwildcard -> Buffer.add_string buf "default"
+          | Pconst (Cint n) ->
+            Buffer.add_string buf "case ";
+            Buffer.add_string buf (string_of_int n)
+          | Pconst (Cbool b) ->
+            Buffer.add_string buf "case ";
+            Buffer.add_string buf (if b then "1" else "0")
+          | _ -> failwith "unsupported pattern");
+         Buffer.add_string buf ":\n";
+         compile_stmt buf (indent + 2) s;
+         Buffer.add_string buf (String.make (indent + 2) ' ');
+         Buffer.add_string buf "break;\n")
+      cases;
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf "}\n"
   | _ -> failwith "unsupported statement"
 ;;
 

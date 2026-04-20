@@ -1,9 +1,10 @@
 {
-    define x of int32 = 3;
-    define y of int32 = 4;
-    if (x == y) {
-        print(x);
-    } else {
-        print(y);
-    }
+    define x of int32 = 2;
+
+    match x with
+        1 -> print(10);
+        2 -> print(20);
+        3 -> print(30);
+        _ -> print(0);
+    ;
 }
