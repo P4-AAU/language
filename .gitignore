@@ -11,5 +11,7 @@ _build/
 *.cmi
 *.cmx
 *.o
-.claude/
+
+# Claude Code
 CLAUDE.md
+claude_code_configs/ 
