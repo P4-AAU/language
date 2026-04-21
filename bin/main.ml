@@ -9,9 +9,13 @@ let () =
   try
     let ast = Parser.file Lexer.token lexbuf in
     close_in ic;
+    let _env = Typecheck.check_program ast in
     let c_code = Codegen.compile ast in
     print_string c_code
   with
+  | Failure msg ->
+    Printf.eprintf "Type error: %s\n" msg;
+    exit 1
   | Lexer.Lexing_error msg ->
     Printf.eprintf "Lexing error: %s\n" msg;
     exit 1
