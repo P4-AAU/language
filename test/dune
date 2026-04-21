@@ -1,0 +1,4 @@
+(test
+ (name test_p4_project)
+ (libraries p4_project))
+ 

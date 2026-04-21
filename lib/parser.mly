@@ -18,6 +18,7 @@
 %token UINT8 UINT16 UINT32 UINT64
 %token BOOL ARRAY STRING BUFFER
 %token LIFO FIFO
+%token TRUE FALSE
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
@@ -48,8 +49,8 @@ typ:
   | base = typ LBT RBT { Tarray base }
   | BOOL { Tbool }
   | STRING { Tstring }
-  | FIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (FIFO, elem_ty, size) }
-  | LIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }
+(*  | FIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (FIFO, elem_ty, size) }*)
+(*  | LIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }*)
 
 expr:
   | c = CST { Ecst c }
@@ -62,6 +63,8 @@ expr:
   | LBT es = separated_list(COMMA, expr) RBT { Earray es }
   | LENGTHOF LP e = expr RP { Elength e }
   | LP e = expr RP { e }
+  | TRUE  { Ecst (Cbool true) }
+  | FALSE { Ecst (Cbool false) }
 
 block:
   | LCURLY s = nonempty_list(stmt) RCURLY { s }

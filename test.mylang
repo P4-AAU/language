@@ -1,1 +1,4 @@
-x === 5
+{
+  define x of int32 = 42;
+  print(x);
+}
