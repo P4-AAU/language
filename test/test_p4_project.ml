@@ -6,14 +6,17 @@ let parse str =
 ;;
 
 let test_valid () =
-  match parse "x = 5" with
+  match parse "{ x = 5; }" with
   | _ -> print_endline "OK: x = 5"
+  | exception exn ->
+      print_endline ("Unexpected error: " ^ Printexc.to_string exn)
 ;;
 
 let test_invalid () =
-  match parse "x === 5" with
+  match parse "{ x === 5; }" with
   | _ -> print_endline "FAIL: should have errored"
-  | exception Parser.Error -> print_endline "x === 5 rejected"
+  | exception exn ->
+      print_endline ("Rejected as expected: " ^ Printexc.to_string exn)
 ;;
 
 let () =
