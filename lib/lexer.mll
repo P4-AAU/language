@@ -43,6 +43,7 @@
      "buffer", BUFFER;
      "lifo",   LIFO;
      "fifo",   FIFO;
+     "sqrt",   SQRT;
    ];
    fun s -> try Hashtbl.find h s with Not_found -> IDENT s
 }
@@ -71,7 +72,7 @@ rule token = parse
  | "*"       {TIMES}
  | "/"       {DIV}
  | "%"       {MOD}
- | "^"       {POW} 
+ | "^"       {POW}
  | "=="      {EQ}
  | "!="      {NEQ}
  | "<="      {LEQ}

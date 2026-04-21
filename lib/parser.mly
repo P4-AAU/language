@@ -8,7 +8,7 @@
 %token <Ast.constant> CST
 %token DEFINE OF TO FOR IN IF ELSE PRINT MATCH WITH RETURN LENGTHOF DELETE INPUT
 %token AND OR NOT
-%token PLUS MINUS TIMES DIV MOD POW
+%token PLUS MINUS TIMES DIV MOD POW SQRT
 %token EQ NEQ LT LEQ GT GEQ
 %token ASSIGN
 %token LP RP LCURLY RCURLY LBT RBT
@@ -26,7 +26,7 @@
 %nonassoc EQ NEQ LT LEQ GT GEQ
 %left PLUS MINUS
 %left TIMES DIV MOD
-%right POW
+%right POW SQRT
 %nonassoc unary_minus
 
 %start <Ast.file> file
@@ -56,6 +56,7 @@ expr:
   | id = ident { Eident id }
   | MINUS e1 = expr %prec unary_minus { Eunop (Uneg, e1) }
   | NOT e1 = expr { Eunop (Unot, e1) }
+  | SQRT e1 = expr {Eunop (Usqrt, e1)}
   | e1 = expr o = binop e2 = expr { Ebinop (o, e1, e2) }
   | e = expr LBT idx = expr RBT { Eindex (e, idx) }
   | e = expr LBT s = expr COLON t = expr RBT { Eslice (e, s, t) }

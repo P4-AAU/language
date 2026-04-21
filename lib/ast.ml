@@ -7,11 +7,14 @@ type ident =
   ; id : string
   }
 
-type buffer_kind = FIFO | LIFO
+type buffer_kind =
+  | FIFO
+  | LIFO
 
 type unop =
   | Uneg
   | Unot
+  | Usqrt
 
 type binop =
   | Badd
@@ -50,13 +53,18 @@ type expr =
   | Elength of expr
 
 and typ =
-  | Tint8 | Tint16 | Tint32 | Tint64
-  | Tuint8 | Tuint16 | Tuint32 | Tuint64
+  | Tint8
+  | Tint16
+  | Tint32
+  | Tint64
+  | Tuint8
+  | Tuint16
+  | Tuint32
+  | Tuint64
   | Tbool
   | Tstring
   | Tarray of typ
   | Tbuffer of buffer_kind * typ * expr
-
 
 type stmt =
   | Sif of expr * stmt * stmt
@@ -69,11 +77,9 @@ type stmt =
   | Sdefine of ident * typ * expr
   | Sassign_index of ident * expr * expr
   | Smatch of expr * (pattern * stmt) list
-  | Sbuffer of ident * typ * expr * expr list  
-  | Sdelete of ident                          
-  | Sinput of ident * typ                     
-  | Sforrange of ident * expr * expr * stmt    
-
-
+  | Sbuffer of ident * typ * expr * expr list
+  | Sdelete of ident
+  | Sinput of ident * typ
+  | Sforrange of ident * expr * expr * stmt
 
 type file = stmt list

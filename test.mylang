@@ -1,1 +1,16 @@
-x === 5
+{
+    define x of int32 = 4;
+    define y of int32 = 1;
+
+    if (x > y) {
+        define z of int32 = sqrt x;
+    } else {
+        define z of int32 = x ^ 2;
+    }
+
+    match z with
+        2 -> print(2);
+        16 -> print(16);
+        _ -> print(0);
+    ;
+}
