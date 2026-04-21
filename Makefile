@@ -7,7 +7,7 @@ run:
 	docker compose run --rm p4
 
 test:
-	docker compose run --rm p4 opam exec -- dune test
+	docker compose run --rm p4 opam exec -- dune test -f
 
 shell:
 	docker compose run --rm p4 bash
