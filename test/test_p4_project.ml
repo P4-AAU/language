@@ -7,7 +7,7 @@ let parse str =
 
 let test_valid () =
   match parse "{ x = 5; }" with
-  | _ -> print_endline "OK: x = 5"
+  | _ -> print_endline "OK: { x = 5; }"
   | exception exn ->
       print_endline ("Unexpected error: " ^ Printexc.to_string exn)
 ;;

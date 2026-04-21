@@ -83,7 +83,7 @@ stmt:
   | DELETE id = ident SEMI { Sdelete id }
   | f = func_decl { f }
   | b = block { Sblock b }
-  | BUFFER name = ident COLON ty = typ ASSIGN size = expr SEMI { Sbuffer (name, ty, size, []) }
+  BUFFER name : ty ASSIGN size = expr LBT xs = separated_list(COMMA, expr) RBT SEMI { Sbuffer (name, ty, size, xs) }
 
 match_case:
   | ps = patterns ARROW s = stmt { (ps, s) }
