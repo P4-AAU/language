@@ -10,7 +10,7 @@ execute:
 	docker compose run --rm p4 opam exec -- dune exec bin/executor.exe -- test.mylang
 
 test:
-	docker compose run --rm p4 opam exec -- dune test
+	docker compose run --rm p4 opam exec -- dune exec test/test.exe
 
 shell:
 	docker compose run --rm p4 bash
