@@ -46,7 +46,8 @@ let compile_typ = function
   | _ -> failwith "unsupported type"
 ;;
 
-let rec compile_expr buf = function
+let rec compile_expr buf expr =
+  match expr.expr_node with
   | Ecst (Cint n) -> Buffer.add_string buf (string_of_int n)
   | Ecst (Cbool b) -> Buffer.add_string buf (if b then "1" else "0")
   | Eident id -> Buffer.add_string buf id.id
