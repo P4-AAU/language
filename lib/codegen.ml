@@ -46,6 +46,7 @@ let compile_typ = function
   | _ -> failwith "unsupported type"
 ;;
 
+
 let rec compile_expr buf expr =
   match expr.expr_node with
   | Ecst (Cint n) -> Buffer.add_string buf (string_of_int n)
@@ -73,9 +74,22 @@ List.iter
     Buffer.add_char buf ' ';
     compile_expr buf e2
   | _ -> failwith "unsupported expression"
-;;
 
-let rec compile_stmt buf indent = function
+
+and handle_func id typ params body indent buf = 
+  Buffer.add_string buf (String.make indent ' ');
+  Buffer.add_string buf (compile_typ typ);
+  Buffer.add_char buf ' ';
+  Buffer.add_string buf id.id;
+  Buffer.add_char buf '(';
+  let param_strs = List.map (fun (parameter_name, parameter_typ) ->
+    compile_typ parameter_typ ^ " " ^ parameter_name.id
+  ) params in
+  Buffer.add_string buf (String.concat ", " param_strs);
+  Buffer.add_string buf ")";
+  compile_stmt buf indent body;
+
+and compile_stmt buf indent = function
   | Sdefine (id, typ, e) ->
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf (compile_typ typ);
@@ -104,6 +118,7 @@ let rec compile_stmt buf indent = function
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "{\n";
     List.iter (compile_stmt buf (indent + 2)) stmts;
+    Buffer.add_char buf '\n';
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "}\n"
   | Sif (cond, then_, else_) ->
@@ -142,8 +157,16 @@ let rec compile_stmt buf indent = function
       cases;
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "}\n"
+  | Sreturn e -> 
+      Buffer.add_string buf (String.make indent ' ');
+      Buffer.add_string buf "return ";
+      compile_expr buf e;
+      Buffer.add_char buf ';'
+  | Sfunc (id, typ, params, body) -> handle_func id typ params body indent buf
   | _ -> failwith "unsupported statement"
 ;;
+
+  
 
 let compile (program : file) : string =
   let buf = Buffer.create 256 in

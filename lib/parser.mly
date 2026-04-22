@@ -76,7 +76,7 @@ stmt:
   | PRINT LP args = separated_list(COMMA, expr) RP SEMI { Sprint args }
   | FOR id = ident IN e = expr b = block { Sfor (id, e, Sblock b) }
   | FOR id = ident IN e1 = expr TO e2 = expr b = block { Sforrange (id, e1, e2, Sblock b) }
-  | MATCH e = expr WITH cs = nonempty_list(match_case) SEMI { Smatch (e, cs) }
+  | MATCH e = expr WITH cs = nonempty_list(match_case) { Smatch (e, cs) }
   | RETURN e = expr SEMI { Sreturn e }
   | INPUT id = ident COLON ty = typ SEMI { Sinput (id, ty) }
   | DELETE id = ident SEMI { Sdelete id }

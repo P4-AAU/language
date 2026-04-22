@@ -197,7 +197,7 @@ and check_stmt env stmt =
     List.iter (fun e -> ignore (infer_expr env e)) exprs;
     env
 
-    (*Tjekker kun efter at return værdien er expr. ikke om det stemmer overens med function return type*)
+    (*Checks if return value is an expression*)
   | Sreturn expr ->
     ignore (infer_expr env expr);
     env
