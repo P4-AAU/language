@@ -139,12 +139,12 @@ and check_return_in_stmt env loc stmt =
       | _ -> (has_return, return_type)
     ) (false, Tint32) stmts
 
-  | Sif (_, then_body, else_body) ->
+  | Sif (cond, then_body, else_body) ->
     let (then_return, then_return_type) = check_return_in_stmt env loc then_body in
     let (else_return, else_return_type) = check_return_in_stmt env loc else_body in
     (match then_return, else_return with
      | true, true when then_return_type = else_return_type -> (true, then_return_type)
-     | true, true -> type_error loc "blocks of different types"
+     | true, true -> type_error cond.expr_loc "blocks of different types"
      | _ -> (false, Tint32))
 
   (* Other statements don't contain returns *)
