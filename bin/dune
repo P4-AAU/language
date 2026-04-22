@@ -1,3 +1,9 @@
 (executable
+ (name main)
  (public_name main)
+ (libraries p4_project))
+
+(executable
+ (name executor)
+ (public_name executor)
  (libraries p4_project))
