@@ -222,8 +222,10 @@ and check_stmt env stmt =
       type_error iterator_name.loc "iterator name already defined";
     let start_is_int = is_int_type (infer_expr env start) in
     let stop_is_int = is_int_type (infer_expr env stop) in
-    if not (start_is_int && stop_is_int) then
+    if not start_is_int then
       type_error start.expr_loc "range bounds must be integer types";
+    if not stop_is_int then
+      type_error stop.expr_loc "range bounds must be integer types";
     ignore (check_stmt env body);
     env
 
