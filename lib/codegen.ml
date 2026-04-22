@@ -56,6 +56,10 @@ let rec compile_expr buf = function
     compile_expr buf e;
     Buffer.add_char buf ')'
   | Ebinop (Bpow, e1, e2) ->
+  (*| Ebinop (Bpow, e1, e2) ->let vars = List.fold_left collect_vars_stmt [] program in
+List.iter
+  (fun v -> Buffer.add_string buf (Printf.sprintf "  int %s = 0;\n" v))
+  (List.rev vars);*)
     Buffer.add_string buf "pow(";
     compile_expr buf e1;
     Buffer.add_string buf ", ";
@@ -145,11 +149,11 @@ let compile (program : file) : string =
   Buffer.add_string
     buf
     "#include <stdio.h>\n#include <stdint.h>\n#include <math.h>\n\nint main(void)\n{\n";
-  let vars = List.fold_left collect_vars_stmt [] program in
-  List.iter
+    (*let vars = List.fold_left collect_vars_stmt [] program in
+    List.iter
     (fun v -> Buffer.add_string buf (Printf.sprintf "  int %s = 0;\n" v))
     (List.rev vars);
-  if vars <> [] then Buffer.add_char buf '\n';
+  if vars <> [] then Buffer.add_char buf '\n';*)
   List.iter (compile_stmt buf 2) program;
   Buffer.add_string buf "  return 0;\n}\n";
   Buffer.contents buf
