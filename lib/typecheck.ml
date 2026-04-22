@@ -210,7 +210,8 @@ and check_stmt env stmt =
         type_error param_name.loc (Printf.sprintf "parameter %s already defined" param_name.id);
       Env.add param_name.id param_type local_env
     ) env params_list in
-    let (has_return, actual_return_type) = check_return_in_stmt function_scope func_name.loc func_body in
+    let checked_scope = check_stmt function_scope func_body in
+    let (has_return, actual_return_type) = check_return_in_stmt checked_scope func_name.loc func_body in
     if not has_return then
       type_error func_name.loc (Printf.sprintf "function %s has no return" func_name.id);
     if actual_return_type <> func_type then
