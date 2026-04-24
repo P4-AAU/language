@@ -53,17 +53,18 @@ typ:
   | LIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }
 
 expr:
-  | c = CST                                          { mk_expr $startpos $endpos (Ecst c) }
-  | id = ident                                       { mk_expr $startpos $endpos (Eident id) }
-  | MINUS e1 = expr %prec unary_minus                { mk_expr $startpos $endpos (Eunop (Uneg, e1)) }
-  | NOT e1 = expr                                    { mk_expr $startpos $endpos (Eunop (Unot, e1)) }
-  | SQRT e1 = expr                                   { mk_expr $startpos $endpos (Eunop (Usqrt, e1)) }
-  | e1 = expr o = binop e2 = expr                    { mk_expr $startpos $endpos (Ebinop (o, e1, e2)) }
-  | e = expr LBT idx = expr RBT                      { mk_expr $startpos $endpos (Eindex (e, idx)) }
-  | e = expr LBT s = expr COLON t = expr RBT         { mk_expr $startpos $endpos (Eslice (e, s, t)) }
-  | LBT es = separated_list(COMMA, expr) RBT         { mk_expr $startpos $endpos (Earray es) }
-  | LENGTHOF LP e = expr RP                          { mk_expr $startpos $endpos (Elength e) }
-  | LP e = expr RP                                   { e }
+  | c = CST                                           { mk_expr $startpos $endpos (Ecst c) }
+  | id = ident                                        { mk_expr $startpos $endpos (Eident id) }
+  | MINUS e1 = expr %prec unary_minus                 { mk_expr $startpos $endpos (Eunop (Uneg, e1)) }
+  | NOT e1 = expr                                     { mk_expr $startpos $endpos (Eunop (Unot, e1)) }
+  | SQRT e1 = expr                                    { mk_expr $startpos $endpos (Eunop (Usqrt, e1)) }
+  | e1 = expr o = binop e2 = expr                     { mk_expr $startpos $endpos (Ebinop (o, e1, e2)) }
+  | e = expr LBT idx = expr RBT                       { mk_expr $startpos $endpos (Eindex (e, idx)) }
+  | e = expr LBT s = expr COLON t = expr RBT          { mk_expr $startpos $endpos (Eslice (e, s, t)) }
+  | LBT es = separated_list(COMMA, expr) RBT          { mk_expr $startpos $endpos (Earray es) }
+  | LENGTHOF LP e = expr RP                           { mk_expr $startpos $endpos (Elength e) }
+  | LP e = expr RP                                    { e }
+  | id = ident LP es = separated_list(COMMA, expr) RP { mk_expr $startpos $endpos (Ecall (id, es))}
 
 block:
   | LCURLY s = nonempty_list(stmt) RCURLY { s }

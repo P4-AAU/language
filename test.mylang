@@ -4,4 +4,8 @@
         return a + b + x;
     }
 
+    define x of int32 = 10;
+    define y of int32 = 20;
+    
+    print(function_plus(x, y));
 }
