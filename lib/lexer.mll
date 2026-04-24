@@ -40,10 +40,11 @@
      "bool",   BOOL;
      "string", STRING;
      "array",  ARRAY;
-     "buffer", BUFFER;
-     "lifo",   LIFO;
-     "fifo",   FIFO;
-     "sqrt",   SQRT;
+     "buffer",   BUFFER;
+     "bufwrite", BUFWRITE;
+     "bufread",  BUFREAD;
+     "buflen",   BUFLEN;
+     "sqrt",     SQRT;
    ];
    fun s -> try Hashtbl.find h s with Not_found -> IDENT s
 }

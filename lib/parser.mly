@@ -18,7 +18,7 @@
 %token INT8 INT16 INT32 INT64
 %token UINT8 UINT16 UINT32 UINT64
 %token BOOL ARRAY STRING BUFFER
-%token LIFO FIFO
+%token BUFWRITE BUFREAD BUFLEN
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
@@ -49,8 +49,7 @@ typ:
   | base = typ LBT RBT { Tarray base }
   | BOOL { Tbool }
   | STRING { Tstring }
-  | FIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (FIFO, elem_ty, size) }
-  | LIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }
+  | BUFFER LT elem_ty = typ COMMA size = expr GT { Tbuffer (elem_ty, size) }
 
 expr:
   | c = CST                                          { mk_expr $startpos $endpos (Ecst c) }
@@ -63,6 +62,8 @@ expr:
   | e = expr LBT s = expr COLON t = expr RBT         { mk_expr $startpos $endpos (Eslice (e, s, t)) }
   | LBT es = separated_list(COMMA, expr) RBT         { mk_expr $startpos $endpos (Earray es) }
   | LENGTHOF LP e = expr RP                          { mk_expr $startpos $endpos (Elength e) }
+  | BUFREAD LP buf = expr COMMA idx = expr RP        { mk_expr $startpos $endpos (Ebufread (buf, idx)) }
+  | BUFLEN LP buf = expr RP                          { mk_expr $startpos $endpos (Ebuflen buf) }
   | LP e = expr RP                                   { e }
 
 block:
@@ -82,7 +83,11 @@ stmt:
   | DELETE id = ident SEMI { Sdelete id }
   | f = func_decl { f }
   | b = block { Sblock b }
-  | BUFFER name = ident COLON ty = typ ASSIGN size = expr SEMI { Sbuffer (name, ty, size, []) }
+  | DEFINE name = ident OF BUFFER LT elem_ty = typ COMMA size = expr GT ASSIGN LBT init 
+    = separated_list(COMMA, expr) RBT SEMI
+      { Sbuffer (name, Tbuffer (elem_ty, size), init) }
+  | BUFWRITE LP buf = expr COMMA value = expr RP SEMI
+      { Sbufwrite (buf, value) }
 
 match_case:
   | ps = patterns ARROW s = stmt { (ps, s) }
