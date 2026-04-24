@@ -64,55 +64,65 @@ let check_pattern_type loc pattern expected_type =
 let types_compatible ty expr te =
   match expr.expr_node with
   | Ecst (Cint _) -> is_int_type ty
+  | Eunop (Uneg, { expr_node = Ecst (Cint _); _ }) -> is_int_type ty
   | _ -> te = ty
 ;;
 
 (*Checks that the value in expr fits into the variable type*)
 let check_size ty expr =
-  match ty, expr.expr_node with
-  | Tint8, Ecst (Cint n) ->
-    if n < -128 || n > 127
-    then
-      type_error
-        expr.expr_loc
-        (Printf.sprintf "value %d does not fit in int8 (range -128 to 127)" n)
-  | Tint16, Ecst (Cint n) ->
-    if n < -32768 || n > 32767
-    then
-      type_error
-        expr.expr_loc
-        (Printf.sprintf "value %d does not fit in int16 (range -32768 to 32767)" n)
-  | Tint32, Ecst (Cint n) ->
-    if n < -2147483648 || n > 2147483647
-    then type_error expr.expr_loc (Printf.sprintf "value %d does not fit in int32" n)
-  | Tint64, Ecst (Cint n) ->
-    if n < -4611686018427387904 || n > 4611686018427387903
-    then type_error expr.expr_loc (Printf.sprintf "value %d does not fit in int64" n)
-  | Tuint8, Ecst (Cint n) ->
-    if n < 0 || n > 255
-    then
-      type_error
-        expr.expr_loc
-        (Printf.sprintf "value %d does not fit in uint8 (range 0 to 255)" n)
-  | Tuint16, Ecst (Cint n) ->
-    if n < 0 || n > 65535
-    then
-      type_error
-        expr.expr_loc
-        (Printf.sprintf "value %d does not fit in uint16 (range 0 to 65535)" n)
-  | Tuint32, Ecst (Cint n) ->
-    if n < 0 || n > 4294967295
-    then
-      type_error
-        expr.expr_loc
-        (Printf.sprintf "value %d does not fit in uint32 (range 0 to 4294967295)" n)
-  | Tuint64, Ecst (Cint n) ->
-    if n < 0
-    then
-      type_error
-        expr.expr_loc
-        (Printf.sprintf "value %d does not fit in uint64 (must be positive)" n)
-  | _ -> ()
+  let opt_n =
+    match expr.expr_node with
+    | Ecst (Cint n) -> Some n
+    | Eunop (Uneg, { expr_node = Ecst (Cint n); _ }) -> Some (-n)
+    | _ -> None
+  in
+  match opt_n with
+  | None -> ()
+  | Some n ->
+    (match ty with
+     | Tint8 ->
+       if n < -128 || n > 127
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in int8 (range -128 to 127)" n)
+     | Tint16 ->
+       if n < -32768 || n > 32767
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in int16 (range -32768 to 32767)" n)
+     | Tint32 ->
+       if n < -2147483648 || n > 2147483647
+       then type_error expr.expr_loc (Printf.sprintf "value %d does not fit in int32" n)
+     | Tint64 ->
+       if n < -4611686018427387904 || n > 4611686018427387903
+       then type_error expr.expr_loc (Printf.sprintf "value %d does not fit in int64" n)
+     | Tuint8 ->
+       if n < 0 || n > 255
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in uint8 (range 0 to 255)" n)
+     | Tuint16 ->
+       if n < 0 || n > 65535
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in uint16 (range 0 to 65535)" n)
+     | Tuint32 ->
+       if n < 0 || n > 4294967295
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in uint32 (range 0 to 4294967295)" n)
+     | Tuint64 ->
+       if n < 0
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in uint64 (must be positive)" n)
+     | _ -> ())
 ;;
 
 (*Checks and returns the type of expressions*)
