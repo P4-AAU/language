@@ -1,14 +1,9 @@
 {
-    define x of int8 = 4;
-    define y of int32 = 1;
-    define z of int32 = 0;
-
-    if (1 < 20){
-        x = 2000000;
-    } else {
-        y = 200;
+    for i in 1 to 5 {
+        print(i);
     }
 
-    z = x + y;
-    
+    for elm in [10, 20, 30] {
+        print(elm);
+    }
 }
