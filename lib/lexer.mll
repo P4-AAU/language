@@ -14,6 +14,8 @@
    [
      "if",     IF;
      "else",   ELSE;
+     "for",    FOR;
+     "in",     IN;
      "print",  PRINT;
      "and",    AND;
      "or",     OR;

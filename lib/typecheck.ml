@@ -132,7 +132,15 @@ let rec infer_expr env expr =
     | _ -> type_error expr.expr_loc "invalid operand types for binary operator"
     end
 
-  | Earray _ | Eindex _ | Eslice _ | Elength _ ->
+  | Earray [] -> Tarray Tint32
+  | Earray (e :: rest) ->
+    let t = infer_expr env e in
+    List.iter (fun e' ->
+      let t' = infer_expr env e' in
+      if t' <> t then type_error expr.expr_loc "array elements must have the same type"
+    ) rest;
+    Tarray t
+  | Eindex _ | Eslice _ | Elength _ ->
     type_error expr.expr_loc "expression type not implemented"
 
 and check_return_in_stmt env loc stmt =
@@ -229,13 +237,14 @@ and check_stmt env stmt =
   | Sforrange (iterator_name, start, stop, body) ->
     if Env.mem iterator_name.id env then
       type_error iterator_name.loc "iterator name already defined";
-    let start_is_int = is_int_type (infer_expr env start) in
-    let stop_is_int = is_int_type (infer_expr env stop) in
-    if not start_is_int then
+    let start_type = infer_expr env start in
+    if not (is_int_type start_type) then
       type_error start.expr_loc "range bounds must be integer types";
-    if not stop_is_int then
+    let stop_type = infer_expr env stop in
+    if not (is_int_type stop_type) then
       type_error stop.expr_loc "range bounds must be integer types";
-    ignore (check_stmt env body);
+    let loop_env = Env.add iterator_name.id start_type env in
+    ignore (check_stmt loop_env body);
     env
 
   | Sfor (iter_name, input, body) ->

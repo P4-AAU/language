@@ -72,6 +72,13 @@ List.iter
     Buffer.add_string buf (compile_binop op);
     Buffer.add_char buf ' ';
     compile_expr buf e2
+  | Earray elems ->
+    Buffer.add_char buf '{';
+    List.iteri (fun i e ->
+      if i > 0 then Buffer.add_string buf ", ";
+      compile_expr buf e
+    ) elems;
+    Buffer.add_char buf '}'
   | _ -> failwith "unsupported expression"
 ;;
 
@@ -140,6 +147,40 @@ let rec compile_stmt buf indent = function
          Buffer.add_string buf (String.make (indent + 2) ' ');
          Buffer.add_string buf "break;\n")
       cases;
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf "}\n"
+  | Sforrange (id, e1, e2, body) ->
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf "for (int32_t ";
+    Buffer.add_string buf id.id;
+    Buffer.add_string buf " = ";
+    compile_expr buf e1;
+    Buffer.add_string buf "; ";
+    Buffer.add_string buf id.id;
+    Buffer.add_string buf " <= ";
+    compile_expr buf e2;
+    Buffer.add_string buf "; ";
+    Buffer.add_string buf id.id;
+    Buffer.add_string buf "++)\n";
+    compile_stmt buf indent body
+  | Sfor (iter_name, input, body) ->
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf "{\n";
+    Buffer.add_string buf (String.make (indent + 2) ' ');
+    Buffer.add_string buf "int32_t _arr[] = ";
+    compile_expr buf input;
+    Buffer.add_string buf ";\n";
+    Buffer.add_string buf (String.make (indent + 2) ' ');
+    Buffer.add_string buf "int32_t _arr_len = sizeof(_arr) / sizeof(_arr[0]);\n";
+    Buffer.add_string buf (String.make (indent + 2) ' ');
+    Buffer.add_string buf "for (int32_t _i = 0; _i < _arr_len; _i++)\n";
+    Buffer.add_string buf (String.make (indent + 2) ' ');
+    Buffer.add_string buf "{\n";
+    Buffer.add_string buf (String.make (indent + 4) ' ');
+    Buffer.add_string buf ("int32_t " ^ iter_name.id ^ " = _arr[_i];\n");
+    compile_stmt buf (indent + 4) body;
+    Buffer.add_string buf (String.make (indent + 2) ' ');
+    Buffer.add_string buf "}\n";
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "}\n"
   | _ -> failwith "unsupported statement"
