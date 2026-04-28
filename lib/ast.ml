@@ -44,6 +44,11 @@ type pattern =
   | Pwildcard
 
 type expr =
+  { expr_loc : location
+  ; expr_node : expr_node
+  }
+
+and expr_node =
   | Ecst of constant
   | Eunop of unop * expr
   | Ebinop of binop * expr * expr
@@ -52,6 +57,7 @@ type expr =
   | Eindex of expr * expr
   | Eslice of expr * expr * expr
   | Elength of expr
+  | Ecall of ident * expr list
 
 and typ =
   | Tint8
