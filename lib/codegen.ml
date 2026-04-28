@@ -57,7 +57,7 @@ let rec compile_expr buf expr =
     compile_expr buf e;
     Buffer.add_char buf ')'
   | Ebinop (Bpow, e1, e2) ->
-  (*| Ebinop (Bpow, e1, e2) ->let vars = List.fold_left collect_vars_stmt [] program in
+    (*| Ebinop (Bpow, e1, e2) ->let vars = List.fold_left collect_vars_stmt [] program in
 List.iter
   (fun v -> Buffer.add_string buf (Printf.sprintf "  int %s = 0;\n" v))
   (List.rev vars);*)
@@ -79,12 +79,37 @@ List.iter
       compile_expr buf e
     ) elems;
     Buffer.add_char buf '}'
+  | Ecall (id, args) ->
+    Buffer.add_string buf id.id;
+    Buffer.add_char buf '(';
+    List.iteri
+      (fun i arg ->
+         if i > 0 then Buffer.add_string buf ", ";
+         compile_expr buf arg)
+      args;
+    Buffer.add_string buf ")"
   | _ -> failwith "unsupported expression"
-;;
 
-let rec compile_stmt buf indent = function
-  | Sdefine (id, typ, e) ->
+and handle_func id typ params body indent buf =
+  Buffer.add_string buf (String.make indent ' ');
+  Buffer.add_string buf (compile_typ typ);
+  Buffer.add_char buf ' ';
+  Buffer.add_string buf id.id;
+  Buffer.add_char buf '(';
+  let param_strs =
+    List.map
+      (fun (parameter_name, parameter_typ) ->
+         compile_typ parameter_typ ^ " " ^ parameter_name.id)
+      params
+  in
+  Buffer.add_string buf (String.concat ", " param_strs);
+  Buffer.add_string buf ")";
+  compile_stmt buf indent body
+
+and compile_stmt buf indent = function
+  | Sdefine (is_mut, id, typ, e) ->
     Buffer.add_string buf (String.make indent ' ');
+    if not is_mut then Buffer.add_string buf "static ";
     Buffer.add_string buf (compile_typ typ);
     Buffer.add_char buf ' ';
     Buffer.add_string buf id.id;
@@ -111,6 +136,7 @@ let rec compile_stmt buf indent = function
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "{\n";
     List.iter (compile_stmt buf (indent + 2)) stmts;
+    Buffer.add_char buf '\n';
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "}\n"
   | Sif (cond, then_, else_) ->
@@ -183,6 +209,12 @@ let rec compile_stmt buf indent = function
     Buffer.add_string buf "}\n";
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "}\n"
+  | Sreturn e ->
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf "return ";
+    compile_expr buf e;
+    Buffer.add_char buf ';'
+  | Sfunc (id, typ, params, body) -> handle_func id typ params body indent buf
   | _ -> failwith "unsupported statement"
 ;;
 
@@ -191,7 +223,7 @@ let compile (program : file) : string =
   Buffer.add_string
     buf
     "#include <stdio.h>\n#include <stdint.h>\n#include <math.h>\n\nint main(void)\n{\n";
-    (*let vars = List.fold_left collect_vars_stmt [] program in
+  (*let vars = List.fold_left collect_vars_stmt [] program in
     List.iter
     (fun v -> Buffer.add_string buf (Printf.sprintf "  int %s = 0;\n" v))
     (List.rev vars);

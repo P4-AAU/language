@@ -43,7 +43,7 @@ type pattern =
   | Pwildcard
 
 type expr =
-  { expr_loc  : location
+  { expr_loc : location
   ; expr_node : expr_node
   }
 
@@ -56,6 +56,7 @@ and expr_node =
   | Eindex of expr * expr
   | Eslice of expr * expr * expr
   | Elength of expr
+  | Ecall of ident * expr list
 
 and typ =
   | Tint8
@@ -79,7 +80,7 @@ type stmt =
   | Sreturn of expr
   | Sfunc of ident * typ * (ident * typ) list * stmt
   | Sfor of ident * expr * stmt
-  | Sdefine of ident * typ * expr
+  | Sdefine of bool * ident * typ * expr
   | Sassign_index of ident * expr * expr
   | Smatch of expr * (pattern * stmt) list
   | Sbuffer of ident * typ * expr * expr list

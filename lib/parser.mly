@@ -19,6 +19,7 @@
 %token UINT8 UINT16 UINT32 UINT64
 %token BOOL ARRAY STRING BUFFER
 %token LIFO FIFO
+%token MUT IMUT
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
@@ -53,30 +54,36 @@ typ:
   | LIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }
 
 expr:
-  | c = CST                                          { mk_expr $startpos $endpos (Ecst c) }
-  | id = ident                                       { mk_expr $startpos $endpos (Eident id) }
-  | MINUS e1 = expr %prec unary_minus                { mk_expr $startpos $endpos (Eunop (Uneg, e1)) }
-  | NOT e1 = expr                                    { mk_expr $startpos $endpos (Eunop (Unot, e1)) }
-  | SQRT e1 = expr                                   { mk_expr $startpos $endpos (Eunop (Usqrt, e1)) }
-  | e1 = expr o = binop e2 = expr                    { mk_expr $startpos $endpos (Ebinop (o, e1, e2)) }
-  | e = expr LBT idx = expr RBT                      { mk_expr $startpos $endpos (Eindex (e, idx)) }
-  | e = expr LBT s = expr COLON t = expr RBT         { mk_expr $startpos $endpos (Eslice (e, s, t)) }
-  | LBT es = separated_list(COMMA, expr) RBT         { mk_expr $startpos $endpos (Earray es) }
-  | LENGTHOF LP e = expr RP                          { mk_expr $startpos $endpos (Elength e) }
-  | LP e = expr RP                                   { e }
+  | c = CST                                           { mk_expr $startpos $endpos (Ecst c) }
+  | id = ident                                        { mk_expr $startpos $endpos (Eident id) }
+  | MINUS e1 = expr %prec unary_minus                 { mk_expr $startpos $endpos (Eunop (Uneg, e1)) }
+  | NOT e1 = expr                                     { mk_expr $startpos $endpos (Eunop (Unot, e1)) }
+  | SQRT e1 = expr                                    { mk_expr $startpos $endpos (Eunop (Usqrt, e1)) }
+  | e1 = expr o = binop e2 = expr                     { mk_expr $startpos $endpos (Ebinop (o, e1, e2)) }
+  | e = expr LBT idx = expr RBT                       { mk_expr $startpos $endpos (Eindex (e, idx)) }
+  | e = expr LBT s = expr COLON t = expr RBT          { mk_expr $startpos $endpos (Eslice (e, s, t)) }
+  | LBT es = separated_list(COMMA, expr) RBT          { mk_expr $startpos $endpos (Earray es) }
+  | LENGTHOF LP e = expr RP                           { mk_expr $startpos $endpos (Elength e) }
+  | LP e = expr RP                                    { e }
+  | id = ident LP es = separated_list(COMMA, expr) RP { mk_expr $startpos $endpos (Ecall (id, es))}
 
 block:
   | LCURLY s = nonempty_list(stmt) RCURLY { s }
 
+mut_opt:
+  | MUT   { true }
+  | IMUT  { false }
+
 stmt:
-  | DEFINE id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (id, ty, e) }
+  | DEFINE id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (false, id, ty, e) }
+  | DEFINE m = mut_opt id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (m, id, ty, e) }
   | id = ident ASSIGN e = expr SEMI { Sassign (id, e) }
   | id = ident LBT e1 = expr RBT ASSIGN e2 = expr SEMI { Sassign_index (id, e1, e2) }
   | IF e = expr b1 = block ELSE b2 = block { Sif (e, Sblock b1, Sblock b2) }
   | PRINT LP args = separated_list(COMMA, expr) RP SEMI { Sprint args }
   | FOR id = ident IN e = expr b = block { Sfor (id, e, Sblock b) }
   | FOR id = ident IN e1 = expr TO e2 = expr b = block { Sforrange (id, e1, e2, Sblock b) }
-  | MATCH e = expr WITH cs = nonempty_list(match_case) SEMI { Smatch (e, cs) }
+  | MATCH e = expr WITH cs = nonempty_list(match_case) { Smatch (e, cs) }
   | RETURN e = expr SEMI { Sreturn e }
   | INPUT id = ident COLON ty = typ SEMI { Sinput (id, ty) }
   | DELETE id = ident SEMI { Sdelete id }
