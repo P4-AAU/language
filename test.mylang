@@ -6,6 +6,9 @@
 
     define x of int32 = 10;
     define y of int32 = 20;
+    define z of int32 = 20;
+
+    z = x + y;
     
     print(function_plus(x, y));
 }

@@ -4,7 +4,7 @@ open Ast
 module Env = Map.Make (String)
 
 type env_entry =
-  | Var of typ
+  | Var of typ * bool
   | Func of typ list * typ
 
 let type_error (loc : location) msg =
@@ -137,7 +137,7 @@ let rec infer_expr env expr =
        | Not_found -> None
      with
      | None -> type_error id.loc (Printf.sprintf "unknown variable: %s" id.id)
-     | Some (Var t) -> t
+     | Some (Var (t, _mut)) -> t
      | Some (Func _) ->
        type_error id.loc (Printf.sprintf "%s is a function, not a variable" id.id))
   | Eunop (op, e) ->
@@ -224,7 +224,7 @@ and check_stmt env stmt =
   match stmt with
   (* Checks if variable to change exists. Checks if type of variable is the same as type of expr. Checks size of expr vs varaible type*)
   | Sassign (id, expr) ->
-    let t =
+    let t, mut =
       match
         try Some (Env.find id.id env) with
         | Not_found -> None
@@ -232,15 +232,17 @@ and check_stmt env stmt =
       | None -> type_error id.loc (Printf.sprintf "Variable %s not found" id.id)
       | Some (Func _) ->
         type_error id.loc (Printf.sprintf "%s is a function, not a variable" id.id)
-      | Some (Var t) -> t
+      | Some (Var (t, mut)) -> t, mut
     in
+    if not mut
+    then type_error id.loc (Printf.sprintf "variable %s is immutable" id.id);
     let te = infer_expr env expr in
     if not (types_compatible t expr te)
     then type_error expr.expr_loc (Printf.sprintf "type mismatch in assign '%s'" id.id);
     check_size t expr;
     env
     (*Checks if variable is already defined. Checks if type of variable is the same as type of expr. Checks size of expr vs varaible type*)
-  | Sdefine (id, ty, expr) ->
+  | Sdefine (is_mut, id, ty, expr) ->
     if Env.mem id.id env
     then type_error id.loc (Printf.sprintf "Variable %s is already defined" id.id);
     let te = infer_expr env expr in
@@ -254,7 +256,7 @@ and check_stmt env stmt =
            (show_typ ty)
            (show_typ te));
     check_size ty expr;
-    Env.add id.id (Var ty) env
+    Env.add id.id (Var (ty, is_mut)) env
     (*Checks that condidion is a expr that returns bool. Recursively goes through the next blocks*)
   | Sif (cond, thn, els) ->
     let tc = infer_expr env cond in
@@ -284,7 +286,7 @@ and check_stmt env stmt =
              type_error
                param_name.loc
                (Printf.sprintf "parameter %s already defined" param_name.id);
-           Env.add param_name.id (Var param_type) local_env)
+           Env.add param_name.id (Var (param_type, true)) local_env)
         env
         params_list
     in
@@ -322,7 +324,7 @@ and check_stmt env stmt =
       | Tbuffer (_, elm_type, _) -> elm_type
       | _ -> type_error input.expr_loc "input not iterable type"
     in
-    let loop_env = Env.add iter_name.id (Var iterator_type) env in
+    let loop_env = Env.add iter_name.id (Var (iterator_type, true)) env in
     ignore (check_stmt loop_env body);
     env
   | Smatch (expr, cases) ->
