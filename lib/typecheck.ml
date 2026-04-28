@@ -1,4 +1,8 @@
 open Ast
+type binding = {
+  typ : typ;
+  mutable_flag : bool;
+}
 (*Make Env map to keep track of variable types in the environment*)
 module Env = Map.Make(String)
 
@@ -97,7 +101,7 @@ let rec infer_expr env expr =
   | Ecst (Cstring _) -> Tstring
 
   | Eident id -> 
-    (try Env.find id.id env
+    (try (Env.find id.id env).typ
     with Not_found -> type_error (Printf.sprintf "unknown variable: %s" id.id))
     
   | Eunop (op, e) ->
@@ -155,11 +159,15 @@ and check_stmt env stmt =
   match stmt with
       (* Checks if variable to change exists. Checks if type of variable is the same as type of expr. Checks size of expr vs varaible type*)
   | Sassign (id, expr) ->
-    let t =
-      try Env.find id.id env
-      with Not_found ->
-        type_error (Printf.sprintf "Variable %s not found" id.id)
+    let binding =
+  try Env.find id.id env
+  with Not_found ->
+    type_error (Printf.sprintf "Variable %s not found" id.id)
     in
+    if not binding.mutable_flag then
+       type_error (Printf.sprintf "Cannot assign to immutable variable '%s'" id.id);
+
+    let t = binding.typ in
     let te = infer_expr env expr in
     if not (types_compatible t expr te) then
       type_error (Printf.sprintf "type mismatch in assign '%s'" id.id);
@@ -167,7 +175,7 @@ and check_stmt env stmt =
     env
 
     (*Checks if variable is already defined. Checks if type of variable is the same as type of expr. Checks size of expr vs varaible type*)
-  | Sdefine (bool, id, ty, expr) ->
+  | Sdefine (is_mutable, id, ty, expr) ->
     if Env.mem id.id env then
       type_error (Printf.sprintf "Variable %s is already defined" id.id);
     let te = infer_expr env expr in
@@ -176,7 +184,7 @@ and check_stmt env stmt =
          "type mismatch in definition of '%s': expected %s but got %s"
         id.id (show_typ ty) (show_typ te));
     check_size ty expr;
-    Env.add id.id ty env
+    Env.add id.id { typ = ty; mutable_flag = is_mutable } env
   
     (*Checks that condidion is a expr that returns bool. Recursively goes through the next blocks*)
   | Sif (cond, thn, els) ->
@@ -206,7 +214,7 @@ and check_stmt env stmt =
       
    let function_scope = List.fold_left (fun local_env (param_name,param_type)->
          if Env.mem param_name.id local_env then type_error ( Printf.sprintf "Variable already defined inside function %s" param_name.id);
-         Env.add param_name.id param_type local_env
+         Env.add param_name.id { typ = param_type; mutable_flag = false } local_env
       ) env params_list in
    let (has_return, actual_return_type) = check_return_in_stmt function_scope func_body in
 
@@ -215,7 +223,7 @@ and check_stmt env stmt =
    if actual_return_type <> func_type then
          type_error "return type does not match function type";
    
-   Env.add func_name.id func_type env;
+   Env.add func_name.id { typ = func_type; mutable_flag = false } env;
 
   | Sforrange (iterator_name, start,stop, body) ->
       if Env.mem iterator_name.id env then 
@@ -224,7 +232,10 @@ and check_stmt env stmt =
       let stop_is_Tint = is_int_type (infer_expr  env stop) in 
       if not (start_is_Tint && stop_is_Tint) then  
          type_error "range is undefined in for loop - input not of type int";
-      ignore (check_stmt  env body);
+      let loop_env =
+      Env.add iterator_name.id { typ = Tint32; mutable_flag = false } env
+      in
+      ignore (check_stmt loop_env body);
       env
   | Sfor (iter_name, input, body) ->
       if Env.mem iter_name.id env then 
@@ -236,7 +247,7 @@ and check_stmt env stmt =
       | Tbuffer (_,elm_type,_) -> elm_type
       |_ -> type_error "input not iterable type"
       in
-      let loop_env = Env.add iter_name.id iterator_type env in 
+      let loop_env =   Env.add iter_name.id { typ = iterator_type; mutable_flag = false } env in 
       ignore (check_stmt loop_env body);
       env
 
