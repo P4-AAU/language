@@ -22,11 +22,11 @@
      "false",  CST (Cbool false);
      "return", RETURN;
      "lengthof", LENGTHOF;
-    "match",  MATCH;
-    "with",   WITH;
-    "to",     TO;
-    "delete", DELETE;
-    "input",  INPUT;
+     "match",  MATCH;
+     "with",   WITH;
+     "to",     TO;
+     "delete", DELETE;
+     "input",  INPUT;
      "define", DEFINE;
      "of",     OF;
      "int8",   INT8;
@@ -44,6 +44,8 @@
      "lifo",   LIFO;
      "fifo",   FIFO;
      "sqrt",   SQRT;
+     "mut",    MUT;
+     "imut",   IMUT;
    ];
    fun s -> try Hashtbl.find h s with Not_found -> IDENT s
 }

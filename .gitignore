@@ -16,3 +16,5 @@ _build/
 # Claude Code
 CLAUDE.md
 claude_code_configs/ 
+output_program
+.gitignore

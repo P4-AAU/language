@@ -18,6 +18,7 @@
 %token UINT8 UINT16 UINT32 UINT64
 %token BOOL ARRAY STRING BUFFER
 %token LIFO FIFO
+%token MUT IMUT
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
@@ -67,8 +68,14 @@ expr:
 block:
   | LCURLY s = nonempty_list(stmt) RCURLY { s }
 
+
+mut_opt:
+  | MUT   { true }
+  | IMUT  { false }
+
 stmt:
-  | DEFINE id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (id, ty, e) }
+  | DEFINE id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (false, id, ty, e) }
+  | DEFINE m = mut_opt id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (m, id, ty, e) }
   | id = ident ASSIGN e = expr SEMI { Sassign (id, e) }
   | id = ident LBT e1 = expr RBT ASSIGN e2 = expr SEMI { Sassign_index (id, e1, e2) }
   | IF e = expr b1 = block ELSE b2 = block { Sif (e, Sblock b1, Sblock b2) }

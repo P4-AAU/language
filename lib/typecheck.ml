@@ -167,7 +167,7 @@ and check_stmt env stmt =
     env
 
     (*Checks if variable is already defined. Checks if type of variable is the same as type of expr. Checks size of expr vs varaible type*)
-  | Sdefine (id, ty, expr) ->
+  | Sdefine (bool, id, ty, expr) ->
     if Env.mem id.id env then
       type_error (Printf.sprintf "Variable %s is already defined" id.id);
     let te = infer_expr env expr in

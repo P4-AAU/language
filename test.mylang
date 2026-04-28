@@ -1,5 +1,5 @@
 {
-    define x of int32 = 4;
+    defne x of int8 = 40000000000;
     define y of int32 = 1;
     define z of int32 = 0;
 
@@ -11,4 +11,9 @@
 
     z = x + y;
     
+    match z with
+        0 -> print(10);
+        1 -> print(20);
+        _ -> print(0);
+    ;
 }

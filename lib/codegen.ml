@@ -75,8 +75,9 @@ List.iter
 ;;
 
 let rec compile_stmt buf indent = function
-  | Sdefine (id, typ, e) ->
+  | Sdefine (is_mut, id, typ, e) ->
     Buffer.add_string buf (String.make indent ' ');
+    if not is_mut then Buffer.add_string buf "static ";
     Buffer.add_string buf (compile_typ typ);
     Buffer.add_char buf ' ';
     Buffer.add_string buf id.id;

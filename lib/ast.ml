@@ -74,7 +74,7 @@ type stmt =
   | Sreturn of expr
   | Sfunc of ident * typ * (ident * typ) list * stmt
   | Sfor of ident * expr * stmt
-  | Sdefine of ident * typ * expr
+  | Sdefine of bool * ident * typ * expr
   | Sassign_index of ident * expr * expr
   | Smatch of expr * (pattern * stmt) list
   | Sbuffer of ident * typ * expr * expr list
