@@ -37,11 +37,9 @@ let compile_typ = function
   | Tint8 -> "int8_t"
   | Tint16 -> "int16_t"
   | Tint32 -> "int32_t"
-  | Tint64 -> "int64_t"
   | Tuint8 -> "uint8_t"
   | Tuint16 -> "uint16_t"
   | Tuint32 -> "uint32_t"
-  | Tuint64 -> "uint64_t"
   | Tbool -> "int8_t"
   | _ -> failwith "unsupported type"
 ;;
@@ -71,6 +69,20 @@ List.iter
     Buffer.add_char buf ' ';
     Buffer.add_string buf (compile_binop op);
     Buffer.add_char buf ' ';
+    compile_expr buf e2
+  | Ebuflen e ->
+    compile_expr buf e;
+    Buffer.add_string buf "_len"
+  | Ebufread e ->
+    compile_expr buf e;
+    Buffer.add_string buf "_data[--";
+    compile_expr buf e;
+    Buffer.add_string buf "_len]"
+  | Ebufwrite (e1, e2) ->
+    compile_expr buf e1;
+    Buffer.add_string buf "_data[";
+    compile_expr buf e1;
+    Buffer.add_string buf "_len++] = ";
     compile_expr buf e2
   | _ -> failwith "unsupported expression"
 ;;
@@ -142,6 +154,18 @@ let rec compile_stmt buf indent = function
       cases;
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "}\n"
+  | Sbuffer (name, ty, size) ->
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf (compile_typ ty);
+    Buffer.add_char buf ' ';
+    Buffer.add_string buf name.id;
+    Buffer.add_string buf "_data[";
+    compile_expr buf size;
+    Buffer.add_string buf "];\n";
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf "int ";
+    Buffer.add_string buf name.id;
+    Buffer.add_string buf "_len = 0;\n"
   | _ -> failwith "unsupported statement"
 ;;
 

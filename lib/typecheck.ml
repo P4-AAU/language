@@ -9,8 +9,8 @@ let type_error (loc : location) msg =
 
 (* gruppering af integers, for at kunne lave "when same_numeric_type" *)
 let is_int_type = function
-  | Tint8 | Tint16 | Tint32 | Tint64
-  | Tuint8 | Tuint16 | Tuint32 | Tuint64 -> true
+  | Tint8 | Tint16 | Tint32
+  | Tuint8 | Tuint16 | Tuint32 -> true
   | _ -> false
 
 (* Logik: Her vil Tint8 = Tint16 give error - kan evt. laves om til at acceptere det *)
@@ -27,16 +27,13 @@ let rec show_typ = function
   | Tint8 -> "int8"
   | Tint16 -> "int16"
   | Tint32 -> "int32"
-  | Tint64 -> "int64"
   | Tuint8 -> "uint8"
   | Tuint16 -> "uint16"
   | Tuint32 -> "uint32"
-  | Tuint64 -> "uint64"
   | Tbool -> "bool"
   | Tstring -> "string"
   | Tarray t -> "array of " ^ (show_typ t)
-  | Tbuffer (FIFO, t, _) -> "fifo buffer of " ^ (show_typ t)
-  | Tbuffer (LIFO, t, _) -> "lifo buffer of " ^ (show_typ t)
+  | Tbuffer (t, _) -> "buffer of " ^ (show_typ t)
 
 let check_pattern_type loc pattern expected_type =
   match pattern with
@@ -77,10 +74,6 @@ let check_size ty expr =
         if n < -2147483648 || n > 2147483647 then
           type_error expr.expr_loc (Printf.sprintf
             "value %d does not fit in int32" n)
-    | Tint64  ->
-        if n < -4611686018427387904 || n > 4611686018427387903 then
-          type_error expr.expr_loc (Printf.sprintf
-            "value %d does not fit in int64" n)
     | Tuint8  ->
         if n < 0 || n > 255 then
           type_error expr.expr_loc (Printf.sprintf
@@ -93,10 +86,6 @@ let check_size ty expr =
         if n < 0 || n > 4294967295 then
           type_error expr.expr_loc (Printf.sprintf
             "value %d does not fit in uint32 (range 0 to 4294967295)" n)
-    | Tuint64 ->
-        if n < 0 then
-          type_error expr.expr_loc (Printf.sprintf
-            "value %d does not fit in uint64 (must be positive)" n)
     | _ -> ()
 
 (*Checks and returns the type of expressions*)
@@ -131,6 +120,25 @@ let rec infer_expr env expr =
     | ((Band | Bor), Tbool, Tbool) -> Tbool
     | _ -> type_error expr.expr_loc "invalid operand types for binary operator"
     end
+
+  | Ebuflen e ->
+    (match infer_expr env e with
+    | Tbuffer _ -> Tint32
+    | _ -> type_error expr.expr_loc "buflen expects a buffer")
+  | Ebufread e ->
+    (match infer_expr env e with
+    | Tbuffer (elem_ty, _) -> elem_ty
+    | _ -> type_error expr.expr_loc "bufread expects a buffer")
+  | Ebufwrite (e1, e2) ->
+    (match infer_expr env e1 with
+    | Tbuffer (elem_ty, _) ->
+        let t2 = infer_expr env e2 in
+        if t2 <> elem_ty then
+          type_error expr.expr_loc (Printf.sprintf
+            "bufwrite type mismatch: buffer holds %s but got %s"
+            (show_typ elem_ty) (show_typ t2));
+        elem_ty
+    | _ -> type_error expr.expr_loc "bufwrite expects a buffer as first argument")
 
   | Earray _ | Eindex _ | Eslice _ | Elength _ ->
     type_error expr.expr_loc "expression type not implemented"
@@ -245,7 +253,7 @@ and check_stmt env stmt =
     let iterator_type = match input_type with
       | Tarray elm_type -> elm_type
       | Tstring -> Tstring
-      | Tbuffer (_, elm_type, _) -> elm_type
+      | Tbuffer (elm_type, _) -> elm_type
       | _ -> type_error input.expr_loc "input not iterable type"
     in
     let loop_env = Env.add iter_name.id iterator_type env in
@@ -262,8 +270,12 @@ and check_stmt env stmt =
 
   | Sassign_index (id, _, _) ->
     type_error id.loc "assign index not implemented"
-  | Sbuffer (name, _, _, _) ->
-    type_error name.loc "buffer not implemented"
+  | Sbuffer (name, ty, size) ->
+    if Env.mem name.id env then
+      type_error name.loc (Printf.sprintf "Variable %s is already defined" name.id);
+    if not (is_int_type (infer_expr env size)) then
+      type_error name.loc "buffer size must be an integer type";
+    Env.add name.id (Tbuffer (ty, size)) env
   | Sdelete id ->
     type_error id.loc "delete not implemented"
   | Sinput (id, _) ->

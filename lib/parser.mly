@@ -15,10 +15,10 @@
 %token LP RP LCURLY RCURLY LBT RBT
 %token COLON COMMA SEMI FACCES ARROW
 %token EOF
-%token INT8 INT16 INT32 INT64
-%token UINT8 UINT16 UINT32 UINT64
+%token INT8 INT16 INT32
+%token UINT8 UINT16 UINT32
 %token BOOL ARRAY STRING BUFFER
-%token LIFO FIFO
+%token BUFLEN BUFREAD BUFWRITE
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
@@ -41,16 +41,12 @@ typ:
   | INT8 { Tint8 }
   | INT16 { Tint16 }
   | INT32 { Tint32 }
-  | INT64 { Tint64 }
   | UINT8 { Tuint8 }
   | UINT16 { Tuint16 }
   | UINT32 { Tuint32 }
-  | UINT64 { Tuint64 }
   | base = typ LBT RBT { Tarray base }
   | BOOL { Tbool }
   | STRING { Tstring }
-  | FIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (FIFO, elem_ty, size) }
-  | LIFO LP elem_ty = typ COMMA size = expr RP { Tbuffer (LIFO, elem_ty, size) }
 
 expr:
   | c = CST                                          { mk_expr $startpos $endpos (Ecst c) }
@@ -64,6 +60,9 @@ expr:
   | LBT es = separated_list(COMMA, expr) RBT         { mk_expr $startpos $endpos (Earray es) }
   | LENGTHOF LP e = expr RP                          { mk_expr $startpos $endpos (Elength e) }
   | LP e = expr RP                                   { e }
+  | BUFLEN LP e = expr RP                            { mk_expr $startpos $endpos (Ebuflen e) }
+  | BUFREAD LP e = expr RP                           { mk_expr $startpos $endpos (Ebufread e) }
+  | BUFWRITE LP e1 = expr COMMA e2 = expr RP         { mk_expr $startpos $endpos (Ebufwrite (e1, e2)) }
 
 block:
   | LCURLY s = nonempty_list(stmt) RCURLY { s }
@@ -82,7 +81,7 @@ stmt:
   | DELETE id = ident SEMI { Sdelete id }
   | f = func_decl { f }
   | b = block { Sblock b }
-  | BUFFER name = ident COLON ty = typ ASSIGN size = expr SEMI { Sbuffer (name, ty, size, []) }
+  | BUFFER name = ident COLON ty = typ ASSIGN size = expr SEMI { Sbuffer (name, ty, size) }
 
 match_case:
   | ps = patterns ARROW s = stmt { (ps, s) }
