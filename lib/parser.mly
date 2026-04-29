@@ -19,6 +19,7 @@
 %token UINT8 UINT16 UINT32
 %token BOOL ARRAY STRING BUFFER
 %token BUFLEN BUFREAD BUFWRITE
+%token MUT IMUT
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
