@@ -20,7 +20,8 @@ let type_error (loc : location) msg =
 
 (* gruppering af integers, for at kunne lave "when same_numeric_type" *)
 let is_int_type = function
-  | Tint8 | Tint16 | Tint32 | Tint64 | Tuint8 | Tuint16 | Tuint32 | Tuint64 -> true
+  | Tint8 | Tint16 | Tint32
+  | Tuint8 | Tuint16 | Tuint32 -> true
   | _ -> false
 ;;
 
@@ -38,17 +39,13 @@ let rec show_typ = function
   | Tint8 -> "int8"
   | Tint16 -> "int16"
   | Tint32 -> "int32"
-  | Tint64 -> "int64"
   | Tuint8 -> "uint8"
   | Tuint16 -> "uint16"
   | Tuint32 -> "uint32"
-  | Tuint64 -> "uint64"
   | Tbool -> "bool"
   | Tstring -> "string"
-  | Tarray t -> "array of " ^ show_typ t
-  | Tbuffer (FIFO, t, _) -> "fifo buffer of " ^ show_typ t
-  | Tbuffer (LIFO, t, _) -> "lifo buffer of " ^ show_typ t
-;;
+  | Tarray t -> "array of " ^ (show_typ t)
+  | Tbuffer (t, _) -> "buffer of " ^ (show_typ t)
 
 let check_pattern_type loc pattern expected_type =
   match pattern with
@@ -79,51 +76,32 @@ let check_size ty expr =
   match opt_n with
   | None -> ()
   | Some n ->
-    (match ty with
-     | Tint8 ->
-       if n < -128 || n > 127
-       then
-         type_error
-           expr.expr_loc
-           (Printf.sprintf "value %d does not fit in int8 (range -128 to 127)" n)
-     | Tint16 ->
-       if n < -32768 || n > 32767
-       then
-         type_error
-           expr.expr_loc
-           (Printf.sprintf "value %d does not fit in int16 (range -32768 to 32767)" n)
-     | Tint32 ->
-       if n < -2147483648 || n > 2147483647
-       then type_error expr.expr_loc (Printf.sprintf "value %d does not fit in int32" n)
-     | Tint64 ->
-       if n < -4611686018427387904 || n > 4611686018427387903
-       then type_error expr.expr_loc (Printf.sprintf "value %d does not fit in int64" n)
-     | Tuint8 ->
-       if n < 0 || n > 255
-       then
-         type_error
-           expr.expr_loc
-           (Printf.sprintf "value %d does not fit in uint8 (range 0 to 255)" n)
-     | Tuint16 ->
-       if n < 0 || n > 65535
-       then
-         type_error
-           expr.expr_loc
-           (Printf.sprintf "value %d does not fit in uint16 (range 0 to 65535)" n)
-     | Tuint32 ->
-       if n < 0 || n > 4294967295
-       then
-         type_error
-           expr.expr_loc
-           (Printf.sprintf "value %d does not fit in uint32 (range 0 to 4294967295)" n)
-     | Tuint64 ->
-       if n < 0
-       then
-         type_error
-           expr.expr_loc
-           (Printf.sprintf "value %d does not fit in uint64 (must be positive)" n)
-     | _ -> ())
-;;
+    match ty with
+    | Tint8   ->
+        if n < -128 || n > 127 then
+          type_error expr.expr_loc (Printf.sprintf
+            "value %d does not fit in int8 (range -128 to 127)" n)
+    | Tint16  ->
+        if n < -32768 || n > 32767 then
+          type_error expr.expr_loc (Printf.sprintf
+            "value %d does not fit in int16 (range -32768 to 32767)" n)
+    | Tint32  ->
+        if n < -2147483648 || n > 2147483647 then
+          type_error expr.expr_loc (Printf.sprintf
+            "value %d does not fit in int32" n)
+    | Tuint8  ->
+        if n < 0 || n > 255 then
+          type_error expr.expr_loc (Printf.sprintf
+            "value %d does not fit in uint8 (range 0 to 255)" n)
+    | Tuint16 ->
+        if n < 0 || n > 65535 then
+          type_error expr.expr_loc (Printf.sprintf
+            "value %d does not fit in uint16 (range 0 to 65535)" n)
+    | Tuint32 ->
+        if n < 0 || n > 4294967295 then
+          type_error expr.expr_loc (Printf.sprintf
+            "value %d does not fit in uint32 (range 0 to 4294967295)" n)
+    | _ -> ()
 
 (*Checks and returns the type of expressions*)
 let rec infer_expr env expr =
@@ -149,6 +127,36 @@ let rec infer_expr env expr =
   | Ebinop (op, e1, e2) ->
     let t1 = infer_expr env e1 in
     let t2 = infer_expr env e2 in
+    begin match (op, t1, t2) with
+    | ((Badd | Bsub | Bmul | Bdiv | Bmod | Bpow), t1, t2)
+    when same_numeric_type t1 t2 -> t1
+    | ((Blt | Ble | Bgt | Bge), t1, t2)
+    when same_numeric_type t1 t2 -> Tbool
+    | ((Beq | Bneq), t1, t2)
+    when t1 = t2 && is_comparable_type t1 -> Tbool
+    | ((Band | Bor), Tbool, Tbool) -> Tbool
+    | _ -> type_error expr.expr_loc "invalid operand types for binary operator"
+    end
+
+  | Ebuflen e ->
+    (match infer_expr env e with
+    | Tbuffer _ -> Tint32
+    | _ -> type_error expr.expr_loc "buflen expects a buffer")
+  | Ebufread e ->
+    (match infer_expr env e with
+    | Tbuffer (elem_ty, _) -> elem_ty
+    | _ -> type_error expr.expr_loc "bufread expects a buffer")
+  | Ebufwrite (e1, e2) ->
+    (match infer_expr env e1 with
+    | Tbuffer (elem_ty, _) ->
+        let t2 = infer_expr env e2 in
+        if t2 <> elem_ty then
+          type_error expr.expr_loc (Printf.sprintf
+            "bufwrite type mismatch: buffer holds %s but got %s"
+            (show_typ elem_ty) (show_typ t2));
+        elem_ty
+    | _ -> type_error expr.expr_loc "bufwrite expects a buffer as first argument")
+
     (match op, t1, t2 with
      | (Badd | Bsub | Bmul | Bdiv | Bmod | Bpow), t1, t2 when same_numeric_type t1 t2 ->
        t1
@@ -321,7 +329,7 @@ and check_stmt env stmt =
       match input_type with
       | Tarray elm_type -> elm_type
       | Tstring -> Tstring
-      | Tbuffer (_, elm_type, _) -> elm_type
+      | Tbuffer (elm_type, _) -> elm_type
       | _ -> type_error input.expr_loc "input not iterable type"
     in
     let loop_env = Env.add iter_name.id (Var (iterator_type, true)) env in
@@ -341,4 +349,21 @@ and check_stmt env stmt =
   | Sinput (id, _) -> type_error id.loc "input not implemented"
 ;;
 
-let check_program stmts = List.fold_left check_stmt Env.empty stmts
+  | Sassign_index (id, _, _) ->
+    type_error id.loc "assign index not implemented"
+
+  | Sbuffer (name, ty, size) ->
+    if Env.mem name.id env then
+      type_error name.loc (Printf.sprintf "Variable %s is already defined" name.id);
+    if not (is_int_type (infer_expr env size)) then
+      type_error name.loc "buffer size must be an integer type";
+    Env.add name.id (Tbuffer (ty, size)) env
+
+  | Sdelete id ->
+    type_error id.loc "delete not implemented"
+
+  | Sinput (id, _) ->
+    type_error id.loc "input not implemented"
+
+let check_program stmts =
+  List.fold_left check_stmt Env.empty stmts
