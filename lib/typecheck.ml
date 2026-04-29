@@ -34,7 +34,6 @@ let rec show_typ = function
   | Tstring -> "string"
   | Tarray t -> "array of " ^ (show_typ t)
   | Tbuffer (t, _) -> "buffer of " ^ (show_typ t)
-  | Tbuffer (t, _) -> "buffer of " ^ (show_typ t)
 
 let check_pattern_type loc pattern expected_type =
   match pattern with
@@ -167,7 +166,7 @@ and check_return_in_stmt env loc stmt =
 
   (* Other statements don't contain returns *)
   | Sassign _ | Sdefine _ | Sprint _ | Sfor _ | Smatch _
-  | Sbuffer _ | Sbufwrite _ | Sdelete _ | Sinput _ | Sforrange _ | Sassign_index _ | Sfunc _ ->
+  | Sbuffer _ | Sdelete _ | Sinput _ | Sforrange _ | Sassign_index _ | Sfunc _ ->
     (false, Tint32)
 
 (*Checks that the right types of expressions are used in statements and updates environment*)
@@ -295,21 +294,6 @@ and check_stmt env stmt =
       check_size elem_ty e
     ) init_exprs;
     Env.add name.id buf_ty env
-
-  | Sbufwrite (buf_expr, val_expr) ->
-    let buf_type = infer_expr env buf_expr in
-    let elem_ty = match buf_type with
-      | Tbuffer (elem_ty, _) -> elem_ty
-      | _ -> type_error buf_expr.expr_loc
-               (Printf.sprintf "expected a buffer but got %s" (show_typ buf_type))
-    in
-    let val_type = infer_expr env val_expr in
-    if not (types_compatible elem_ty val_expr val_type) then
-      type_error val_expr.expr_loc (Printf.sprintf
-        "type mismatch in bufwrite: expected %s but got %s"
-        (show_typ elem_ty) (show_typ val_type));
-    check_size elem_ty val_expr;
-    env
 
   | Sassign_index (id, _, _) ->
     type_error id.loc "assign index not implemented"
