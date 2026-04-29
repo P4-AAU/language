@@ -59,6 +59,8 @@ expr:
   | e = expr LBT s = expr COLON t = expr RBT         { mk_expr $startpos $endpos (Eslice (e, s, t)) }
   | LBT es = separated_list(COMMA, expr) RBT         { mk_expr $startpos $endpos (Earray es) }
   | LENGTHOF LP e = expr RP                          { mk_expr $startpos $endpos (Elength e) }
+  | BUFREAD LP buf = expr COMMA idx = expr RP        { mk_expr $startpos $endpos (Ebufread (buf, idx)) }
+  | BUFLEN LP buf = expr RP                          { mk_expr $startpos $endpos (Ebuflen buf) }
   | LP e = expr RP                                   { e }
   | BUFLEN LP e = expr RP                            { mk_expr $startpos $endpos (Ebuflen e) }
   | BUFREAD LP e = expr RP                           { mk_expr $startpos $endpos (Ebufread e) }
