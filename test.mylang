@@ -1,14 +1,14 @@
 {
-    define x of int8 = 4;
-    define y of int32 = 1;
-    define z of int32 = 0;
-
-    if (1 < 20){
-        x = 2000000;
-    } else {
-        y = 200;
+    define function_plus of int32(a of int32, b of int32){
+        define x of int32 = 0;
+        return a + b + x;
     }
+
+    define x of int32 = 10;
+    define y of int32 = 20;
+    define z of int32 = 20;
 
     z = x + y;
     
+    print(function_plus(x, y));
 }
