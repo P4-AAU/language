@@ -254,7 +254,6 @@ and check_stmt env stmt =
       | Tarray elm_type -> elm_type
       | Tstring -> Tstring
       | Tbuffer (elm_type, _) -> elm_type
-      | Tbuffer (elm_type, _) -> elm_type
       | _ -> type_error input.expr_loc "input not iterable type"
     in
     let loop_env = Env.add iter_name.id iterator_type env in
@@ -269,42 +268,19 @@ and check_stmt env stmt =
     ) cases;
     env
 
-  | Sbuffer (name, buf_ty, init_exprs) ->
-    if Env.mem name.id env then
-      type_error name.loc (Printf.sprintf "Variable %s is already defined" name.id);
-    let (elem_ty, size_expr) = match buf_ty with
-      | Tbuffer (elem_ty, size_expr) -> (elem_ty, size_expr)
-      | _ -> type_error name.loc "expected Buffer<type, size> in buffer declaration"
-    in
-    let n = match size_expr.expr_node with
-      | Ecst (Cint n) when n > 0 -> n
-      | Ecst (Cint _) -> type_error size_expr.expr_loc "buffer size must be greater than 0"
-      | _ -> type_error size_expr.expr_loc "buffer size must be a positive integer literal"
-    in
-    if List.length init_exprs > n then
-      type_error name.loc (Printf.sprintf
-        "too many initial values: buffer has size %d but %d values given"
-        n (List.length init_exprs));
-    List.iter (fun e ->
-      let te = infer_expr env e in
-      if not (types_compatible elem_ty e te) then
-        type_error e.expr_loc (Printf.sprintf
-          "initial value type mismatch: expected %s but got %s"
-          (show_typ elem_ty) (show_typ te));
-      check_size elem_ty e
-    ) init_exprs;
-    Env.add name.id buf_ty env
-
   | Sassign_index (id, _, _) ->
     type_error id.loc "assign index not implemented"
+
   | Sbuffer (name, ty, size) ->
     if Env.mem name.id env then
       type_error name.loc (Printf.sprintf "Variable %s is already defined" name.id);
     if not (is_int_type (infer_expr env size)) then
       type_error name.loc "buffer size must be an integer type";
     Env.add name.id (Tbuffer (ty, size)) env
+
   | Sdelete id ->
     type_error id.loc "delete not implemented"
+
   | Sinput (id, _) ->
     type_error id.loc "input not implemented"
 
