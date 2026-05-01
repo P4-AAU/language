@@ -1,5 +1,5 @@
 (cram
- (deps
-  %{bin:p4-project}
-  (glob_files valid/*.p4)
-  (glob_files invalid/*.p4)))
+   (deps
+    %{bin:main}
+    (glob_files valid/*.mylang)
+    (glob_files invalid/*.mylang)))

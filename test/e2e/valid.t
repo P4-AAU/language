@@ -1,6 +1,17 @@
-Valid programs should be accepted (exit 0). Output assertions will be
-filled in once the interpreter/code-generator is implemented.
+  $ echo "{define x of int8 = 1;}" > program.mylang
+  $ main program.mylang
+  #include <stdio.h>
+  #include <stdint.h>
+  #include <math.h>
+  
+  int main(void)
+  {
+    static int8_t x = 1;
+    return 0;
+  }
 
-  $ p4-project valid/hello.p4
+  $ main valid/arithmetic.mylang
+  Type error: valid/arithmetic.mylang:3:21: invalid operand types for binary operator
+  [1]
 
-  $ p4-project valid/arithmetic.p4
+

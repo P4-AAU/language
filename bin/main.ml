@@ -1,24 +1,28 @@
-let read_file filename =
-  let ic = open_in filename in
-  let n = in_channel_length ic in
-  let s = Bytes.create n in
-  really_input ic s 0 n;
-  close_in ic;
-  Bytes.to_string s
+open P4_project
 
 let () =
-  match Sys.argv with
-  | [| _ |] ->
-    Printf.eprintf "Usage: p4-project <file>\n";
+  let filename = Sys.argv.(1) in
+  let ic = open_in filename in
+  let lexbuf = Lexing.from_channel ic in
+  lexbuf.Lexing.lex_curr_p
+  <- { lexbuf.Lexing.lex_curr_p with Lexing.pos_fname = filename };
+  try
+    let ast = Parser.file Lexer.token lexbuf in
+    close_in ic;
+    let _env = Typecheck.check_program ast in
+    let c_code = Codegen.compile ast in
+    print_string c_code
+  with
+  | Failure msg ->
+    Printf.eprintf "Type error: %s\n" msg;
     exit 1
-  | [| _; filename |] ->
-    let source = read_file filename in
-    if String.length (String.trim source) = 0 then begin
-      Printf.eprintf "Error: '%s' is empty\n" filename;
-      exit 1
-    end;
-    (* TODO: lex, parse, and execute source *)
-    ignore source
-  | _ ->
-    Printf.eprintf "Usage: p4-project <file>\n";
+  | Lexer.Lexing_error msg ->
+    Printf.eprintf "Lexing error: %s\n" msg;
     exit 1
+  | Parser.Error ->
+    Printf.eprintf
+      "Syntax error at %s:%d\n"
+      filename
+      lexbuf.Lexing.lex_curr_p.Lexing.pos_lnum;
+    exit 1
+;;

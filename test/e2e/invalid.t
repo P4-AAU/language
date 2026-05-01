@@ -1,14 +1,14 @@
-Invalid programs should be rejected with a non-zero exit code and a
-diagnostic on stderr. Cases marked [lexer pending] currently exit 0
-because the lexer is not yet implemented; update them to [1] once it is.
-
-Empty files are detectable without a lexer and already fail correctly.
-
-  $ p4-project invalid/empty.p4
-  Error: 'invalid/empty.p4' is empty
+Invalid test: define variable of type integer and set it to 256
+  $ echo "{ define y of int8 = 256;}" > program.mylang
+  $ main program.mylang
+  Type error: program.mylang:1:22: value 256 does not fit in int8 (range -128 to 127)
   [1]
 
-A file whose first token is illegal should be rejected by the lexer.
-[lexer pending] — currently exits 0 silently.
 
-  $ p4-project invalid/syntax_error.p4
+  $ main invalid/larger_int.mylang
+  Type error: invalid/larger_int.mylang:1:21: value 256 does not fit in int8 (range -128 to 127)
+  [1]
+
+  $ main invalid/syntax_error.mylang
+  Lexing error: unexpected character: !
+  [1]
