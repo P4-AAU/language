@@ -1,6 +1,7 @@
 open Alcotest
 open P4_project.Ast
 open P4_project.Typecheck
+open P4_project.Parser
 
 module Env = Map.Make (String)
 
@@ -11,6 +12,8 @@ let dummy_loc =
 let make_ident id = { loc = dummy_loc; id }
 let make_expr node = { expr_loc = dummy_loc; expr_node = node }
 
+
+(*TYPECHECKER UNIT TESTS --------------------------*)
 (* runs f () and fails the test if no type error is raised *)
 let assert_type_error f =
   match f () with
@@ -87,6 +90,30 @@ let typecheck_tests =
   ; test_case "rejects undefined variable" `Quick test_rejects_undefined_variable
   ; test_case "rejects wrong argument type" `Quick test_rejects_wrong_argument_type ]
 
+
+(*PARSER/LEXER/AST INTEGRATION TESTS --------------------------*)
+let parse str =
+  let lexbuf = Lexing.from_string str in
+  P4_project.Parser.file P4_project.Lexer.token lexbuf
+
+(* define x of int8 = 1 should parse into a Sdefine with name x and type Tint8 *)
+let test_parse_define () =
+  match parse "{ define x of int8 = 1; }" with
+  | [ Sdefine (_, id, Tint8, _) ] ->
+    check string "variable name" "x" id.id
+  | _ -> fail "expected Sdefine with Tint8"
+
+(* invalid syntax should raise Parser.Error *)
+let test_parse_rejects_invalid_syntax () =
+  match parse "{ x === 5; }" with
+  | _ -> fail "expected a parse error"
+  | exception Error -> ()
+
+let parser_tests =
+  [ test_case "parse define" `Quick test_parse_define
+  ; test_case "rejects invalid syntax" `Quick test_parse_rejects_invalid_syntax ]
+
 let () =
   run "p4-project"
-    [ ("Typechecker", typecheck_tests) ]
+    [ ("Typechecker", typecheck_tests)
+    ; ("Parser", parser_tests) ]

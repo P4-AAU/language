@@ -37,10 +37,10 @@
   }
 
   $ main valid/function.mylang
-  #include <stdio.h>                 
+  #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
-
+  
   int main(void)
   {
     int32_t function_plus(int32_t a, int32_t b)  {
@@ -53,6 +53,20 @@
     return 0;
   }
 
+  $ main valid/mutimut.mylang
+  #include <stdio.h>
+  #include <stdint.h>
+  #include <math.h>
+  
+  int main(void)
+  {
+    static int32_t x = 10;
+    int32_t y = 20;
+    y = 30;
+    printf("%d\n", x);
+    printf("%d\n", y);
+    return 0;
+  }
 
 
 
