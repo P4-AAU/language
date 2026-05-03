@@ -68,5 +68,25 @@
     return 0;
   }
 
+  $ main valid/ifelse.mylang
+  #include <stdio.h>                 
+  #include <stdint.h>
+  #include <math.h>
+
+  int main(void)
+  {
+    if (5 < 0)
+    {
+      printf("%d\n", 1);
+
+    }
+    else
+    {
+      printf("%d\n", 0);
+
+    }
+    return 0;
+  }
+
 
 
