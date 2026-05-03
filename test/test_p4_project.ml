@@ -1,85 +1,92 @@
 open Alcotest
 open P4_project.Ast
+open P4_project.Typecheck
 
-(* ===================================================================
-   AST CONSTRUCTION TESTS
-   =================================================================== *)
+module Env = Map.Make (String)
 
 let dummy_loc =
   let pos = Lexing.dummy_pos in
   (pos, pos)
 
 let make_ident id = { loc = dummy_loc; id }
+let make_expr node = { expr_loc = dummy_loc; expr_node = node }
 
-let test_ident_name () =
-  let i = make_ident "x" in
-  check string "ident name" "x" i.id
+(* runs f () and fails the test if no type error is raised *)
+let assert_type_error f =
+  match f () with
+  | _ -> fail "expected a type error but typechecker accepted it"
+  | exception Failure _ -> ()
 
-let test_constant_bool () =
-  let c = Cbool true in
-  check bool "constant bool" true (c = Cbool true)
+(* int literal Cint infers to Tint32 *)
+let test_typecheck_infer_int_literal () =
+  let e = make_expr (Ecst (Cint 42)) in
+  match infer_expr Env.empty e with
+  | Tint32 -> ()
+  | t -> fail ("Expected Tint32, got " ^ show_typ t)
 
-let test_constant_int () =
-  let c = Cint32 42 in
-  check bool "constant int32" true (c = Cint32 42)
+(* variable lookup returns the type it was declared with *)
+let test_typecheck_infer_ident () =
+  let id = make_ident "x" in
+  let env = Env.add "x" (Var (Tint32, false)) Env.empty in
+  let e = make_expr (Eident id) in
+  match infer_expr env e with
+  | Tint32 -> ()
+  | t -> fail ("Expected Tint32, got " ^ show_typ t)
 
-let test_expr_const () =
-  let e = Ecst (Cint32 1) in
-  check bool "expr const" true (e = Ecst (Cint32 1))
+(* arithmetic on same type returns that type: int32 + int32 = int32 *)
+let test_binop_add_returns_input_type () =
+  let lhs = make_expr (Ecst (Cint 1)) in
+  let rhs = make_expr (Ecst (Cint 2)) in
+  let e = make_expr (Ebinop (Badd, lhs, rhs)) in
+  match infer_expr Env.empty e with
+  | Tint32 -> ()
+  | t -> fail ("Expected Tint32, got " ^ show_typ t)
 
-let test_expr_binop () =
-  let e = Ebinop (Badd, Ecst (Cint32 1), Ecst (Cint32 2)) in
-  check bool "expr binop add" true (e = Ebinop (Badd, Ecst (Cint32 1), Ecst (Cint32 2)))
+(* comparison on same type returns bool: int32 < int32 = bool *)
+let test_binop_comparison_returns_bool () =
+  let lhs = make_expr (Ecst (Cint 1)) in
+  let rhs = make_expr (Ecst (Cint 2)) in
+  let e = make_expr (Ebinop (Blt, lhs, rhs)) in
+  match infer_expr Env.empty e with
+  | Tbool -> ()
+  | t -> fail ("Expected Tbool, got " ^ show_typ t)
 
-let test_expr_unop () =
-  let e = Eunop (Uneg, Ecst (Cint32 5)) in
-  check bool "expr unop neg" true (e = Eunop (Uneg, Ecst (Cint32 5)))
+(* int8 + int32 must be rejected — numeric types are not implicitly widened *)
+let test_rejects_mixed_numeric_types () =
+  let env = Env.add "x" (Var (Tint8, false)) Env.empty in
+  let lhs = make_expr (Eident (make_ident "x")) in
+  let rhs = make_expr (Ecst (Cint 1)) in
+  let e = make_expr (Ebinop (Badd, lhs, rhs)) in
+  assert_type_error (fun () -> ignore (infer_expr env e))
 
-let test_stmt_assign () =
-  let id = make_ident "y" in
-  let s = Sassign (id, Ecst (Cbool false)) in
-  (match s with
-   | Sassign (i, Ecst (Cbool false)) -> check string "assign ident" "y" i.id
-   | _ -> fail "expected Sassign")
+(* 256 does not fit in int8 (range -128 to 127) *)
+let test_rejects_int_out_of_range () =
+  let stmt = Sdefine (false, make_ident "x", Tint8, make_expr (Ecst (Cint 256))) in
+  assert_type_error (fun () -> ignore (check_stmt Env.empty stmt))
 
-let test_stmt_block () =
-  let s = Sblock [] in
-  check bool "empty block" true (s = Sblock [])
+(* referencing a variable not in scope must be rejected *)
+let test_rejects_undefined_variable () =
+  let e = make_expr (Eident (make_ident "undefined")) in
+  assert_type_error (fun () -> ignore (infer_expr Env.empty e))
 
-let test_pattern_default () =
-  check bool "pattern default" true (Pdefault = Pdefault)
+(* calling f(x) where f expects bool but x is int32 must be rejected *)
+let test_rejects_wrong_argument_type () =
+  let env = Env.add "f" (Func ([ Tbool ], Tint32)) Env.empty in
+  let env = Env.add "x" (Var (Tint32, false)) env in
+  let arg = make_expr (Eident (make_ident "x")) in
+  let e = make_expr (Ecall (make_ident "f", [ arg ])) in
+  assert_type_error (fun () -> ignore (infer_expr env e))
 
-let test_pattern_const () =
-  check bool "pattern const" true (Pconst (Cint32 0) = Pconst (Cint32 0))
-
-(* ===================================================================
-   SUITES
-   =================================================================== *)
-
-let ident_tests =
-  [ test_case "name" `Quick test_ident_name ]
-
-let constant_tests =
-  [ test_case "bool" `Quick test_constant_bool
-  ; test_case "int32" `Quick test_constant_int ]
-
-let expr_tests =
-  [ test_case "const" `Quick test_expr_const
-  ; test_case "binop add" `Quick test_expr_binop
-  ; test_case "unop neg" `Quick test_expr_unop ]
-
-let stmt_tests =
-  [ test_case "assign" `Quick test_stmt_assign
-  ; test_case "empty block" `Quick test_stmt_block ]
-
-let pattern_tests =
-  [ test_case "default" `Quick test_pattern_default
-  ; test_case "const" `Quick test_pattern_const ]
+let typecheck_tests =
+  [ test_case "infer int literal" `Quick test_typecheck_infer_int_literal
+  ; test_case "infer ident from env" `Quick test_typecheck_infer_ident
+  ; test_case "binop add returns input type" `Quick test_binop_add_returns_input_type
+  ; test_case "binop comparison returns bool" `Quick test_binop_comparison_returns_bool
+  ; test_case "rejects mixed numeric types" `Quick test_rejects_mixed_numeric_types
+  ; test_case "rejects int out of range" `Quick test_rejects_int_out_of_range
+  ; test_case "rejects undefined variable" `Quick test_rejects_undefined_variable
+  ; test_case "rejects wrong argument type" `Quick test_rejects_wrong_argument_type ]
 
 let () =
   run "p4-project"
-    [ ("Ident", ident_tests)
-    ; ("Constant", constant_tests)
-    ; ("Expr", expr_tests)
-    ; ("Stmt", stmt_tests)
-    ; ("Pattern", pattern_tests) ]
+    [ ("Typechecker", typecheck_tests) ]

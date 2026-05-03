@@ -12,3 +12,7 @@ Invalid test: define variable of type integer and set it to 256
   $ main invalid/syntax_error.mylang
   Lexing error: unexpected character: !
   [1]
+
+  $ main invalid/arithmetic.mylang
+  Type error: invalid/arithmetic.mylang:3:21: invalid operand types for binary operator
+  [1]
