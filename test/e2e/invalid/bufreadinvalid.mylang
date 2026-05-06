@@ -1,0 +1,11 @@
+{
+buffer buf : int32 = 3;
+define mut target of int32 = 0;
+define mut dummy of int32 = 0;
+dummy = bufwrite ( buf , 1) ;
+dummy = bufwrite ( buf , 2) ;
+dummy = bufwrite ( buf , 3) ; 
+
+target = bufread ( buf , 5) ;
+
+}

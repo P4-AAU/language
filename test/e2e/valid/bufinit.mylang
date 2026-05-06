@@ -1,0 +1,3 @@
+{
+    buffer my_buffer: int32 = 128;
+}

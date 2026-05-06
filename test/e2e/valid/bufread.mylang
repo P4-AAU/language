@@ -1,0 +1,6 @@
+{
+    buffer my_buffer: int32 = 128;
+    define w1 of int32 = bufwrite(my_buffer, 42);
+    define x of int32 = bufread(my_buffer);
+    print(x);
+}

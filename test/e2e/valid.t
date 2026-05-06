@@ -69,24 +69,66 @@
   }
 
   $ main valid/ifelse.mylang
-  #include <stdio.h>                 
+  #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
-
+  
   int main(void)
   {
-    if (5 < 0)
+    if (5 > 0)
     {
       printf("%d\n", 1);
-
+  
     }
     else
     {
       printf("%d\n", 0);
-
+  
     }
     return 0;
   }
+
+  $ main valid/bufinit.mylang
+  #include <stdio.h>
+  #include <stdint.h>
+  #include <math.h>
+  
+  int main(void)
+  {
+    int32_t my_buffer_data[128];
+    int my_buffer_len = 0;
+    return 0;
+  }
+
+  $ main valid/bufwrite.mylang
+  #include <stdio.h>
+  #include <stdint.h>
+  #include <math.h>
+  
+  int main(void)
+  {
+    int32_t my_buffer_data[128];
+    int my_buffer_len = 0;
+    static int32_t w1 = my_buffer_data[my_buffer_len++] = 42;
+    static int32_t w2 = my_buffer_data[my_buffer_len++] = 99;
+    return 0;
+  }
+
+  $ main valid/bufread.mylang
+  #include <stdio.h>
+  #include <stdint.h>
+  #include <math.h>
+  
+  int main(void)
+  {
+    int32_t my_buffer_data[128];
+    int my_buffer_len = 0;
+    static int32_t w1 = my_buffer_data[my_buffer_len++] = 42;
+    static int32_t x = my_buffer_data[--my_buffer_len];
+    printf("%d\n", x);
+    return 0;
+  }
+
 
 
 
