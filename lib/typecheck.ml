@@ -142,28 +142,14 @@ let rec infer_expr env expr =
     (match infer_expr env e with
     | Tbuffer _ -> Tint32
     | _ -> type_error expr.expr_loc "buflen expects a buffer")
-  | Ebufread e ->
-    (match infer_expr env e with
-    | Tbuffer (elem_ty, _) -> elem_ty
-    | _ -> type_error expr.expr_loc "bufread expects a buffer")
-  | Ebufwrite (e1, e2) ->
-    (match infer_expr env e1 with
-    | Tbuffer (elem_ty, _) ->
-        let t2 = infer_expr env e2 in
-        if t2 <> elem_ty then
-          type_error expr.expr_loc (Printf.sprintf
-            "bufwrite type mismatch: buffer holds %s but got %s"
-            (show_typ elem_ty) (show_typ t2));
-        elem_ty
-    | _ -> type_error expr.expr_loc "bufwrite expects a buffer as first argument")
-
-    (match op, t1, t2 with
-     | (Badd | Bsub | Bmul | Bdiv | Bmod | Bpow), t1, t2 when same_numeric_type t1 t2 ->
-       t1
-     | (Blt | Ble | Bgt | Bge), t1, t2 when same_numeric_type t1 t2 -> Tbool
-     | (Beq | Bneq), t1, t2 when t1 = t2 && is_comparable_type t1 -> Tbool
-     | (Band | Bor), Tbool, Tbool -> Tbool
-     | _ -> type_error expr.expr_loc "invalid operand types for binary operator")
+  | Ebufread (buf_expr, idx_expr) ->
+    let elem_ty = match infer_expr env buf_expr with
+      | Tbuffer (elem_ty, _) -> elem_ty
+      | _ -> type_error buf_expr.expr_loc "bufread expects a buffer"
+    in
+    if not (is_int_type (infer_expr env idx_expr)) then
+      type_error idx_expr.expr_loc "buffer index must be an integer type";
+    elem_ty
   | Ecall (id, args) ->
     (match
        try Some (Env.find id.id env) with
@@ -221,6 +207,7 @@ and check_return_in_stmt env loc stmt =
   | Sfor _
   | Smatch _
   | Sbuffer _
+  | Sbufwrite _
   | Sdelete _
   | Sinput _
   | Sforrange _
@@ -343,25 +330,48 @@ and check_stmt env stmt =
          ignore (check_stmt env stmt))
       cases;
     env
-  | Sassign_index (id, _, _) -> type_error id.loc "assign index not implemented"
-  | Sbuffer (name, _, _, _) -> type_error name.loc "buffer not implemented"
-  | Sdelete id -> type_error id.loc "delete not implemented"
-  | Sinput (id, _) -> type_error id.loc "input not implemented"
-;;
-
-  | Sassign_index (id, _, _) ->
-    type_error id.loc "assign index not implemented"
-
-  | Sbuffer (name, ty, size) ->
+  | Sbuffer (name, buf_ty, init_exprs) ->
     if Env.mem name.id env then
       type_error name.loc (Printf.sprintf "Variable %s is already defined" name.id);
-    if not (is_int_type (infer_expr env size)) then
-      type_error name.loc "buffer size must be an integer type";
-    Env.add name.id (Tbuffer (ty, size)) env
-
+    let (elem_ty, size_expr) = match buf_ty with
+      | Tbuffer (e, s) -> (e, s)
+      | _ -> type_error name.loc "expected Buffer<type, size>"
+    in
+    let n = match size_expr.expr_node with
+      | Ecst (Cint n) when n > 0 -> n
+      | Ecst (Cint _) -> type_error size_expr.expr_loc "buffer size must be greater than 0"
+      | _ -> type_error size_expr.expr_loc "buffer size must be a positive integer literal"
+    in
+    if List.length init_exprs > n then
+      type_error name.loc (Printf.sprintf
+        "too many initial values: buffer has size %d but %d values given"
+        n (List.length init_exprs));
+    List.iter (fun e ->
+      let te = infer_expr env e in
+      if not (types_compatible elem_ty e te) then
+        type_error e.expr_loc (Printf.sprintf
+          "initial value type mismatch: expected %s but got %s"
+          (show_typ elem_ty) (show_typ te));
+      check_size elem_ty e
+    ) init_exprs;
+    Env.add name.id (Var (buf_ty, true)) env
+  | Sbufwrite (buf_expr, val_expr) ->
+    let elem_ty = match infer_expr env buf_expr with
+      | Tbuffer (elem_ty, _) -> elem_ty
+      | t -> type_error buf_expr.expr_loc
+               (Printf.sprintf "expected a buffer but got %s" (show_typ t))
+    in
+    let val_type = infer_expr env val_expr in
+    if not (types_compatible elem_ty val_expr val_type) then
+      type_error val_expr.expr_loc (Printf.sprintf
+        "type mismatch in bufwrite: expected %s but got %s"
+        (show_typ elem_ty) (show_typ val_type));
+    check_size elem_ty val_expr;
+    env
+  | Sassign_index (id, _, _) ->
+    type_error id.loc "assign index not implemented"
   | Sdelete id ->
     type_error id.loc "delete not implemented"
-
   | Sinput (id, _) ->
     type_error id.loc "input not implemented"
 

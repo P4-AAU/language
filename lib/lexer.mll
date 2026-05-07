@@ -45,6 +45,8 @@
      "sqrt",   SQRT;
      "for",    FOR;
      "in",     IN;
+     "mut",    MUT;
+     "imut",   IMUT;
    ];
    fun s -> try Hashtbl.find h s with Not_found -> IDENT s
 }
