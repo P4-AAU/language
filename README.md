@@ -1,5 +1,6 @@
 # P4 Compiler
-A compiler for a custom language, written in OCaml.
+A compiler for AUTOBounds, written in OCaml. Using menhir for parsing and ocamllex for lexing.
+
 
 ## Prerequisites
 
@@ -19,9 +20,17 @@ make run
 |---|---|
 | `make build` | Build the Docker image |
 | `make run` | Run the compiler |
+| `make execute` | Compiles and executes the C code |
 | `make test` | Run tests |
 | `make shell` | Open an interactive shell |
 | `make clean` | Remove Docker image and build artifacts |
+
+
+## Troubleshooting
+| Command | Description |
+|---|---|
+| `menhir --explain "FILEPATH"` | Verbose logging of insufficiently defined grammar |
+
 
 ## Contributing
 

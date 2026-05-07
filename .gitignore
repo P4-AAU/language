@@ -1,3 +1,4 @@
+.CLAUDE.md
 .env
 .vscode
 _build/
@@ -10,4 +11,8 @@ _build/
 *.cmo
 *.cmi
 *.cmx
-*.o 
+*.o
+
+# Claude Code
+CLAUDE.md
+claude_code_configs/ 
