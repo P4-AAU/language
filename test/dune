@@ -1,5 +1,4 @@
-(executable
- (name test)
- (public_name test)
- (libraries p4_project))
+(test
+ (name test_p4_project)
+ (libraries p4_project alcotest))
 

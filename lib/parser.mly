@@ -64,6 +64,7 @@ expr:
   | LP e = expr RP                                   { e }
   | BUFLEN LP buf = expr RP                                        { mk_expr $startpos $endpos (Ebuflen buf) }
   | BUFREAD LP buf = expr COMMA idx = expr RP                      { mk_expr $startpos $endpos (Ebufread (buf, idx)) }
+  | id = ident LP es = separated_list(COMMA, expr) RP { mk_expr $startpos $endpos (Ecall (id, es))}
 
 block:
   | LCURLY s = nonempty_list(stmt) RCURLY { s }

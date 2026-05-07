@@ -12,7 +12,10 @@ _build/
 *.cmi
 *.cmx
 *.o
+TESTSUITE.md
 
 # Claude Code
 CLAUDE.md
 claude_code_configs/ 
+.claude
+

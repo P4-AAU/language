@@ -1,0 +1,9 @@
+{
+    define x of int8 = 5;
+
+    match x with
+    2 -> print(2);
+    5 -> print(5);
+    6 -> print(6);
+    _ -> print(0);
+}
