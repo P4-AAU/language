@@ -182,27 +182,34 @@ and compile_stmt buf indent = function
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "}\n"
   | Sbuffer (name, buf_ty, init_exprs) ->
-    let (elem_ty, size_expr) = match buf_ty with
-      | Tbuffer (e, s) -> (e, s)
+    let elem_ty, size_expr =
+      match buf_ty with
+      | Tbuffer (e, s) -> e, s
       | _ -> failwith "expected buffer type"
     in
-    let n = match size_expr.expr_node with
+    let n =
+      match size_expr.expr_node with
       | Ecst (Cint n) -> n
       | _ -> failwith "buffer size must be a constant"
     in
     let c_ty = compile_typ elem_ty in
     Buffer.add_string buf (String.make indent ' ');
-    Buffer.add_string buf
-      (Printf.sprintf "struct { %s data[%d]; int32_t len; int32_t cap; } %s = { {" c_ty n name.id);
+    Buffer.add_string
+      buf
+      (Printf.sprintf
+         "struct { %s data[%d]; int32_t len; int32_t cap; } %s = { {"
+         c_ty
+         n
+         name.id);
     (match init_exprs with
      | [] -> Buffer.add_string buf "0"
      | _ ->
-       List.iteri (fun i e ->
-         if i > 0 then Buffer.add_string buf ", ";
-         compile_expr buf e
-       ) init_exprs);
-    Buffer.add_string buf
-      (Printf.sprintf "}, %d, %d };\n" (List.length init_exprs) n)
+       List.iteri
+         (fun i e ->
+            if i > 0 then Buffer.add_string buf ", ";
+            compile_expr buf e)
+         init_exprs);
+    Buffer.add_string buf (Printf.sprintf "}, %d, %d };\n" (List.length init_exprs) n)
   | Sbufwrite (buf_expr, val_expr) ->
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "assert(";
@@ -230,7 +237,12 @@ let compile (program : file) : string =
   let buf = Buffer.create 256 in
   Buffer.add_string
     buf
-    "#include <stdio.h>\n#include <stdint.h>\n#include <math.h>\n#include <assert.h>\n\nint main(void)\n{\n";
+    "#include <stdio.h>\n\
+     #include <stdint.h>\n\
+     #include <math.h>\n\
+     #include <assert.h>\n\n\
+     int main(void)\n\
+     {\n";
   (*let vars = List.fold_left collect_vars_stmt [] program in
     List.iter
     (fun v -> Buffer.add_string buf (Printf.sprintf "  int %s = 0;\n" v))

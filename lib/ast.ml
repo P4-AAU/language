@@ -53,7 +53,7 @@ and expr_node =
   | Eslice of expr * expr * expr
   | Elength of expr
   | Ebuflen of expr
-  | Ebufread of expr * expr   (* bufread(buf, index) *)
+  | Ebufread of expr * expr (* bufread(buf, index) *)
   | Ecall of ident * expr list
 
 and typ =
@@ -79,8 +79,8 @@ type stmt =
   | Sdefine of bool * ident * typ * expr
   | Sassign_index of ident * expr * expr
   | Smatch of expr * (pattern * stmt) list
-  | Sbuffer of ident * typ * expr list    (* name, Buffer(τ,n) type, init values *)
-  | Sbufwrite of expr * expr              (* bufwrite(buf, value) *)
+  | Sbuffer of ident * typ * expr list (* name, Buffer(τ,n) type, init values *)
+  | Sbufwrite of expr * expr (* bufwrite(buf, value) *)
   | Sdelete of ident
   | Sinput of ident * typ
   | Sforrange of ident * expr * expr * stmt
