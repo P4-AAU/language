@@ -20,7 +20,6 @@
 %token BOOL ARRAY STRING BUFFER
 %token MUT IMUT
 %token BUFLEN BUFREAD BUFWRITE
-%token MUT IMUT
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
