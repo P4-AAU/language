@@ -137,61 +137,52 @@ let rec infer_expr env expr =
   | Ebinop (op, e1, e2) ->
     let t1 = infer_expr env e1 in
     let t2 = infer_expr env e2 in
-    begin match (op, t1, t2) with
-    | ((Badd | Bsub | Bmul | Bdiv | Bmod | Bpow), t1, t2)
-    when same_numeric_type t1 t2 -> t1
-    | ((Blt | Ble | Bgt | Bge), t1, t2)
-    when same_numeric_type t1 t2 -> Tbool
-    | ((Beq | Bneq), t1, t2)
-    when t1 = t2 && is_comparable_type t1 -> Tbool
-    | ((Band | Bor), Tbool, Tbool) -> Tbool
-    | _ -> type_error expr.expr_loc "invalid operand types for binary operator"
-    end
-
+    (match op, t1, t2 with
+     | (Badd | Bsub | Bmul | Bdiv | Bmod | Bpow), t1, t2 when same_numeric_type t1 t2 ->
+       t1
+     | (Blt | Ble | Bgt | Bge), t1, t2 when same_numeric_type t1 t2 -> Tbool
+     | (Beq | Bneq), t1, t2 when t1 = t2 && is_comparable_type t1 -> Tbool
+     | (Band | Bor), Tbool, Tbool -> Tbool
+     | _ -> type_error expr.expr_loc "invalid operand types for binary operator")
   | Ebuflen e ->
     (match infer_expr env e with
-    | Tbuffer _ -> Tint32
-    | _ -> type_error expr.expr_loc "buflen expects a buffer")
-  | Ebufread e ->
-    (match infer_expr env e with
-    | Tbuffer (elem_ty, _) -> elem_ty
-    | _ -> type_error expr.expr_loc "bufread expects a buffer")
-  | Ebufwrite (e1, e2) ->
-    (match infer_expr env e1 with
-    | Tbuffer (elem_ty, _) ->
-        let t2 = infer_expr env e2 in
-        if t2 <> elem_ty then
-          type_error expr.expr_loc (Printf.sprintf
-            "bufwrite type mismatch: buffer holds %s but got %s"
-            (show_typ elem_ty) (show_typ t2));
-        elem_ty
-    | _ -> type_error expr.expr_loc "bufwrite expects a buffer as first argument")
+     | Tbuffer _ -> Tint32
+     | _ -> type_error expr.expr_loc "buflen expects a buffer")
+  | Ebufread (buf_expr, idx_expr) ->
+    let elem_ty =
+      match infer_expr env buf_expr with
+      | Tbuffer (elem_ty, _) -> elem_ty
+      | _ -> type_error buf_expr.expr_loc "bufread expects a buffer"
+    in
+    if not (is_int_type (infer_expr env idx_expr))
+    then type_error idx_expr.expr_loc "buffer index must be an integer type";
+    elem_ty
   | Ecall (id, args) ->
     (match
-      try Some (Env.find id.id env) with
-      | Not_found -> None
-    with
-    | None -> type_error id.loc (Printf.sprintf "unknown function: %s" id.id)
-    | Some (Var _) ->
-      type_error id.loc (Printf.sprintf "%s is a variable, not a function" id.id)
-    | Some (Func (param_types, ret_type)) ->
-      if List.length args <> List.length param_types
-      then
-        type_error
-          id.loc
-          (Printf.sprintf
+       try Some (Env.find id.id env) with
+       | Not_found -> None
+     with
+     | None -> type_error id.loc (Printf.sprintf "unknown function: %s" id.id)
+     | Some (Var _) ->
+       type_error id.loc (Printf.sprintf "%s is a variable, not a function" id.id)
+     | Some (Func (param_types, ret_type)) ->
+       if List.length args <> List.length param_types
+       then
+         type_error
+           id.loc
+           (Printf.sprintf
               "function %s expects %d arguments but got %d"
               id.id
               (List.length param_types)
               (List.length args));
-      List.iter2
-        (fun param_type arg ->
+       List.iter2
+         (fun param_type arg ->
             let arg_type = infer_expr env arg in
             if not (types_compatible param_type arg arg_type)
             then type_error arg.expr_loc "argument type does not match parameter type")
-        param_types
-        args;
-      ret_type)
+         param_types
+         args;
+       ret_type)
   | Earray _ | Eindex _ | Eslice _ | Elength _ ->
     type_error expr.expr_loc "expression type not implemented"
 
@@ -261,10 +252,10 @@ and check_stmt env stmt =
       type_error
         id.loc
         (Printf.sprintf
-          "type mismatch in definition of '%s': expected %s but got %s"
-          id.id
-          (show_typ ty)
-          (show_typ te));
+           "type mismatch in definition of '%s': expected %s but got %s"
+           id.id
+           (show_typ ty)
+           (show_typ te));
     check_size ty expr;
     Env.add id.id (Var (ty, is_mut)) env
     (*Checks that condidion is a expr that returns bool. Recursively goes through the next blocks*)
@@ -291,12 +282,12 @@ and check_stmt env stmt =
     let function_scope =
       List.fold_left
         (fun local_env (param_name, param_type) ->
-          if Env.mem param_name.id local_env
-          then
-            type_error
-              param_name.loc
-              (Printf.sprintf "parameter %s already defined" param_name.id);
-          Env.add param_name.id (Var (param_type, true)) local_env)
+           if Env.mem param_name.id local_env
+           then
+             type_error
+               param_name.loc
+               (Printf.sprintf "parameter %s already defined" param_name.id);
+           Env.add param_name.id (Var (param_type, true)) local_env)
         env
         params_list
     in
@@ -341,8 +332,8 @@ and check_stmt env stmt =
     let expr_type = infer_expr env expr in
     List.iter
       (fun (pattern, stmt) ->
-        check_pattern_type expr.expr_loc pattern expr_type;
-        ignore (check_stmt env stmt))
+         check_pattern_type expr.expr_loc pattern expr_type;
+         ignore (check_stmt env stmt))
       cases;
     env
   | Sbuffer (name, buf_ty, init_exprs) ->
@@ -404,15 +395,8 @@ and check_stmt env stmt =
     check_size elem_ty val_expr;
     env
   | Sassign_index (id, _, _) -> type_error id.loc "assign index not implemented"
-
-  | Sbuffer (name, ty, size) ->
-    if Env.mem name.id env then
-      type_error name.loc (Printf.sprintf "Variable %s is already defined" name.id);
-    if not (is_int_type (infer_expr env size)) then
-      type_error name.loc "buffer size must be an integer type";
-    Env.add name.id (Var (Tbuffer (ty, size), true)) env
   | Sdelete id -> type_error id.loc "delete not implemented"
   | Sinput (id, _) -> type_error id.loc "input not implemented"
+;;
 
-let check_program stmts =
-  List.fold_left check_stmt Env.empty stmts
+let check_program stmts = List.fold_left check_stmt Env.empty stmts
