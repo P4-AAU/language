@@ -70,20 +70,21 @@ List.iter
     Buffer.add_string buf (compile_binop op);
     Buffer.add_char buf ' ';
     compile_expr buf e2
-  | Ebuflen e ->
-    compile_expr buf e;
-    Buffer.add_string buf "_len"
-  | Ebufread e ->
-    compile_expr buf e;
-    Buffer.add_string buf "_data[--";
-    compile_expr buf e;
-    Buffer.add_string buf "_len]"
-  | Ebufwrite (e1, e2) ->
-    compile_expr buf e1;
-    Buffer.add_string buf "_data[";
-    compile_expr buf e1;
-    Buffer.add_string buf "_len++] = ";
-    compile_expr buf e2
+  | Ebufread (buf_expr, idx_expr) ->
+    Buffer.add_string buf "(assert(";
+    compile_expr buf idx_expr;
+    Buffer.add_string buf " >= 0 && ";
+    compile_expr buf idx_expr;
+    Buffer.add_string buf " < ";
+    compile_expr buf buf_expr;
+    Buffer.add_string buf ".len), ";
+    compile_expr buf buf_expr;
+    Buffer.add_string buf ".data[";
+    compile_expr buf idx_expr;
+    Buffer.add_string buf "])"
+  | Ebuflen buf_expr ->
+    compile_expr buf buf_expr;
+    Buffer.add_string buf ".len"
   | Ecall (id, args) ->
     Buffer.add_string buf id.id;
     Buffer.add_char buf '(';
@@ -180,18 +181,49 @@ and compile_stmt buf indent = function
       cases;
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "}\n"
-  | Sbuffer (name, ty, size) ->
+  | Sbuffer (name, buf_ty, init_exprs) ->
+    let elem_ty, size_expr =
+      match buf_ty with
+      | Tbuffer (e, s) -> e, s
+      | _ -> failwith "expected buffer type"
+    in
+    let n =
+      match size_expr.expr_node with
+      | Ecst (Cint n) -> n
+      | _ -> failwith "buffer size must be a constant"
+    in
+    let c_ty = compile_typ elem_ty in
     Buffer.add_string buf (String.make indent ' ');
-    Buffer.add_string buf (compile_typ ty);
-    Buffer.add_char buf ' ';
-    Buffer.add_string buf name.id;
-    Buffer.add_string buf "_data[";
-    compile_expr buf size;
-    Buffer.add_string buf "];\n";
+    Buffer.add_string
+      buf
+      (Printf.sprintf
+         "struct { %s data[%d]; int32_t len; int32_t cap; } %s = { {"
+         c_ty
+         n
+         name.id);
+    (match init_exprs with
+     | [] -> Buffer.add_string buf "0"
+     | _ ->
+       List.iteri
+         (fun i e ->
+            if i > 0 then Buffer.add_string buf ", ";
+            compile_expr buf e)
+         init_exprs);
+    Buffer.add_string buf (Printf.sprintf "}, %d, %d };\n" (List.length init_exprs) n)
+  | Sbufwrite (buf_expr, val_expr) ->
     Buffer.add_string buf (String.make indent ' ');
-    Buffer.add_string buf "int ";
-    Buffer.add_string buf name.id;
-    Buffer.add_string buf "_len = 0;\n"
+    Buffer.add_string buf "assert(";
+    compile_expr buf buf_expr;
+    Buffer.add_string buf ".len < ";
+    compile_expr buf buf_expr;
+    Buffer.add_string buf ".cap);\n";
+    Buffer.add_string buf (String.make indent ' ');
+    compile_expr buf buf_expr;
+    Buffer.add_string buf ".data[";
+    compile_expr buf buf_expr;
+    Buffer.add_string buf ".len++] = ";
+    compile_expr buf val_expr;
+    Buffer.add_string buf ";\n"
   | Sreturn e ->
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "return ";
@@ -205,7 +237,12 @@ let compile (program : file) : string =
   let buf = Buffer.create 256 in
   Buffer.add_string
     buf
-    "#include <stdio.h>\n#include <stdint.h>\n#include <math.h>\n\nint main(void)\n{\n";
+    "#include <stdio.h>\n\
+     #include <stdint.h>\n\
+     #include <math.h>\n\
+     #include <assert.h>\n\n\
+     int main(void)\n\
+     {\n";
   (*let vars = List.fold_left collect_vars_stmt [] program in
     List.iter
     (fun v -> Buffer.add_string buf (Printf.sprintf "  int %s = 0;\n" v))
