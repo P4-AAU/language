@@ -20,8 +20,7 @@ let type_error (loc : location) msg =
 
 (* gruppering af integers, for at kunne lave "when same_numeric_type" *)
 let is_int_type = function
-  | Tint8 | Tint16 | Tint32
-  | Tuint8 | Tuint16 | Tuint32 -> true
+  | Tint8 | Tint16 | Tint32 | Tuint8 | Tuint16 | Tuint32 -> true
   | _ -> false
 ;;
 
@@ -44,8 +43,9 @@ let rec show_typ = function
   | Tuint32 -> "uint32"
   | Tbool -> "bool"
   | Tstring -> "string"
-  | Tarray t -> "array of " ^ (show_typ t)
-  | Tbuffer (t, _) -> "buffer of " ^ (show_typ t)
+  | Tarray t -> "array of " ^ show_typ t
+  | Tbuffer (t, _) -> "buffer of " ^ show_typ t
+;;
 
 let check_pattern_type loc pattern expected_type =
   match pattern with
@@ -76,32 +76,42 @@ let check_size ty expr =
   match opt_n with
   | None -> ()
   | Some n ->
-    match ty with
-    | Tint8   ->
-        if n < -128 || n > 127 then
-          type_error expr.expr_loc (Printf.sprintf
-            "value %d does not fit in int8 (range -128 to 127)" n)
-    | Tint16  ->
-        if n < -32768 || n > 32767 then
-          type_error expr.expr_loc (Printf.sprintf
-            "value %d does not fit in int16 (range -32768 to 32767)" n)
-    | Tint32  ->
-        if n < -2147483648 || n > 2147483647 then
-          type_error expr.expr_loc (Printf.sprintf
-            "value %d does not fit in int32" n)
-    | Tuint8  ->
-        if n < 0 || n > 255 then
-          type_error expr.expr_loc (Printf.sprintf
-            "value %d does not fit in uint8 (range 0 to 255)" n)
-    | Tuint16 ->
-        if n < 0 || n > 65535 then
-          type_error expr.expr_loc (Printf.sprintf
-            "value %d does not fit in uint16 (range 0 to 65535)" n)
-    | Tuint32 ->
-        if n < 0 || n > 4294967295 then
-          type_error expr.expr_loc (Printf.sprintf
-            "value %d does not fit in uint32 (range 0 to 4294967295)" n)
-    | _ -> ()
+    (match ty with
+     | Tint8 ->
+       if n < -128 || n > 127
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in int8 (range -128 to 127)" n)
+     | Tint16 ->
+       if n < -32768 || n > 32767
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in int16 (range -32768 to 32767)" n)
+     | Tint32 ->
+       if n < -2147483648 || n > 2147483647
+       then type_error expr.expr_loc (Printf.sprintf "value %d does not fit in int32" n)
+     | Tuint8 ->
+       if n < 0 || n > 255
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in uint8 (range 0 to 255)" n)
+     | Tuint16 ->
+       if n < 0 || n > 65535
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in uint16 (range 0 to 65535)" n)
+     | Tuint32 ->
+       if n < 0 || n > 4294967295
+       then
+         type_error
+           expr.expr_loc
+           (Printf.sprintf "value %d does not fit in uint32 (range 0 to 4294967295)" n)
+     | _ -> ())
+;;
 
 (*Checks and returns the type of expressions*)
 let rec infer_expr env expr =
@@ -127,61 +137,52 @@ let rec infer_expr env expr =
   | Ebinop (op, e1, e2) ->
     let t1 = infer_expr env e1 in
     let t2 = infer_expr env e2 in
-    begin match (op, t1, t2) with
-    | ((Badd | Bsub | Bmul | Bdiv | Bmod | Bpow), t1, t2)
-    when same_numeric_type t1 t2 -> t1
-    | ((Blt | Ble | Bgt | Bge), t1, t2)
-    when same_numeric_type t1 t2 -> Tbool
-    | ((Beq | Bneq), t1, t2)
-    when t1 = t2 && is_comparable_type t1 -> Tbool
-    | ((Band | Bor), Tbool, Tbool) -> Tbool
-    | _ -> type_error expr.expr_loc "invalid operand types for binary operator"
-    end
-
+    (match op, t1, t2 with
+     | (Badd | Bsub | Bmul | Bdiv | Bmod | Bpow), t1, t2 when same_numeric_type t1 t2 ->
+       t1
+     | (Blt | Ble | Bgt | Bge), t1, t2 when same_numeric_type t1 t2 -> Tbool
+     | (Beq | Bneq), t1, t2 when t1 = t2 && is_comparable_type t1 -> Tbool
+     | (Band | Bor), Tbool, Tbool -> Tbool
+     | _ -> type_error expr.expr_loc "invalid operand types for binary operator")
   | Ebuflen e ->
     (match infer_expr env e with
-    | Tbuffer _ -> Tint32
-    | _ -> type_error expr.expr_loc "buflen expects a buffer")
-  | Ebufread e ->
-    (match infer_expr env e with
-    | Tbuffer (elem_ty, _) -> elem_ty
-    | _ -> type_error expr.expr_loc "bufread expects a buffer")
-  | Ebufwrite (e1, e2) ->
-    (match infer_expr env e1 with
-    | Tbuffer (elem_ty, _) ->
-        let t2 = infer_expr env e2 in
-        if t2 <> elem_ty then
-          type_error expr.expr_loc (Printf.sprintf
-            "bufwrite type mismatch: buffer holds %s but got %s"
-            (show_typ elem_ty) (show_typ t2));
-        elem_ty
-    | _ -> type_error expr.expr_loc "bufwrite expects a buffer as first argument")
+     | Tbuffer _ -> Tint32
+     | _ -> type_error expr.expr_loc "buflen expects a buffer")
+  | Ebufread (buf_expr, idx_expr) ->
+    let elem_ty =
+      match infer_expr env buf_expr with
+      | Tbuffer (elem_ty, _) -> elem_ty
+      | _ -> type_error buf_expr.expr_loc "bufread expects a buffer"
+    in
+    if not (is_int_type (infer_expr env idx_expr))
+    then type_error idx_expr.expr_loc "buffer index must be an integer type";
+    elem_ty
   | Ecall (id, args) ->
     (match
-      try Some (Env.find id.id env) with
-      | Not_found -> None
-    with
-    | None -> type_error id.loc (Printf.sprintf "unknown function: %s" id.id)
-    | Some (Var _) ->
-      type_error id.loc (Printf.sprintf "%s is a variable, not a function" id.id)
-    | Some (Func (param_types, ret_type)) ->
-      if List.length args <> List.length param_types
-      then
-        type_error
-          id.loc
-          (Printf.sprintf
+       try Some (Env.find id.id env) with
+       | Not_found -> None
+     with
+     | None -> type_error id.loc (Printf.sprintf "unknown function: %s" id.id)
+     | Some (Var _) ->
+       type_error id.loc (Printf.sprintf "%s is a variable, not a function" id.id)
+     | Some (Func (param_types, ret_type)) ->
+       if List.length args <> List.length param_types
+       then
+         type_error
+           id.loc
+           (Printf.sprintf
               "function %s expects %d arguments but got %d"
               id.id
               (List.length param_types)
               (List.length args));
-      List.iter2
-        (fun param_type arg ->
+       List.iter2
+         (fun param_type arg ->
             let arg_type = infer_expr env arg in
             if not (types_compatible param_type arg arg_type)
             then type_error arg.expr_loc "argument type does not match parameter type")
-        param_types
-        args;
-      ret_type)
+         param_types
+         args;
+       ret_type)
   | Earray _ | Eindex _ | Eslice _ | Elength _ ->
     type_error expr.expr_loc "expression type not implemented"
 
@@ -213,6 +214,7 @@ and check_return_in_stmt env loc stmt =
   | Sfor _
   | Smatch _
   | Sbuffer _
+  | Sbufwrite _
   | Sdelete _
   | Sinput _
   | Sforrange _
@@ -234,8 +236,7 @@ and check_stmt env stmt =
         type_error id.loc (Printf.sprintf "%s is a function, not a variable" id.id)
       | Some (Var (t, mut)) -> t, mut
     in
-    if not mut
-    then type_error id.loc (Printf.sprintf "variable %s is immutable" id.id);
+    if not mut then type_error id.loc (Printf.sprintf "variable %s is immutable" id.id);
     let te = infer_expr env expr in
     if not (types_compatible t expr te)
     then type_error expr.expr_loc (Printf.sprintf "type mismatch in assign '%s'" id.id);
@@ -251,10 +252,10 @@ and check_stmt env stmt =
       type_error
         id.loc
         (Printf.sprintf
-          "type mismatch in definition of '%s': expected %s but got %s"
-          id.id
-          (show_typ ty)
-          (show_typ te));
+           "type mismatch in definition of '%s': expected %s but got %s"
+           id.id
+           (show_typ ty)
+           (show_typ te));
     check_size ty expr;
     Env.add id.id (Var (ty, is_mut)) env
     (*Checks that condidion is a expr that returns bool. Recursively goes through the next blocks*)
@@ -281,12 +282,12 @@ and check_stmt env stmt =
     let function_scope =
       List.fold_left
         (fun local_env (param_name, param_type) ->
-          if Env.mem param_name.id local_env
-          then
-            type_error
-              param_name.loc
-              (Printf.sprintf "parameter %s already defined" param_name.id);
-          Env.add param_name.id (Var (param_type, true)) local_env)
+           if Env.mem param_name.id local_env
+           then
+             type_error
+               param_name.loc
+               (Printf.sprintf "parameter %s already defined" param_name.id);
+           Env.add param_name.id (Var (param_type, true)) local_env)
         env
         params_list
     in
@@ -331,20 +332,71 @@ and check_stmt env stmt =
     let expr_type = infer_expr env expr in
     List.iter
       (fun (pattern, stmt) ->
-        check_pattern_type expr.expr_loc pattern expr_type;
-        ignore (check_stmt env stmt))
+         check_pattern_type expr.expr_loc pattern expr_type;
+         ignore (check_stmt env stmt))
       cases;
     env
+  | Sbuffer (name, buf_ty, init_exprs) ->
+    if Env.mem name.id env
+    then type_error name.loc (Printf.sprintf "Variable %s is already defined" name.id);
+    let elem_ty, size_expr =
+      match buf_ty with
+      | Tbuffer (e, s) -> e, s
+      | _ -> type_error name.loc "expected Buffer<type, size>"
+    in
+    let n =
+      match size_expr.expr_node with
+      | Ecst (Cint n) when n > 0 -> n
+      | Ecst (Cint _) ->
+        type_error size_expr.expr_loc "buffer size must be greater than 0"
+      | _ ->
+        type_error size_expr.expr_loc "buffer size must be a positive integer literal"
+    in
+    if List.length init_exprs > n
+    then
+      type_error
+        name.loc
+        (Printf.sprintf
+           "too many initial values: buffer has size %d but %d values given"
+           n
+           (List.length init_exprs));
+    List.iter
+      (fun e ->
+         let te = infer_expr env e in
+         if not (types_compatible elem_ty e te)
+         then
+           type_error
+             e.expr_loc
+             (Printf.sprintf
+                "initial value type mismatch: expected %s but got %s"
+                (show_typ elem_ty)
+                (show_typ te));
+         check_size elem_ty e)
+      init_exprs;
+    Env.add name.id (Var (buf_ty, true)) env
+  | Sbufwrite (buf_expr, val_expr) ->
+    let elem_ty =
+      match infer_expr env buf_expr with
+      | Tbuffer (elem_ty, _) -> elem_ty
+      | t ->
+        type_error
+          buf_expr.expr_loc
+          (Printf.sprintf "expected a buffer but got %s" (show_typ t))
+    in
+    let val_type = infer_expr env val_expr in
+    if not (types_compatible elem_ty val_expr val_type)
+    then
+      type_error
+        val_expr.expr_loc
+        (Printf.sprintf
+           "type mismatch in bufwrite: expected %s but got %s"
+           (show_typ elem_ty)
+           (show_typ val_type));
+    check_size elem_ty val_expr;
+    env
   | Sassign_index (id, _, _) -> type_error id.loc "assign index not implemented"
-
-  | Sbuffer (name, ty, size) ->
-    if Env.mem name.id env then
-      type_error name.loc (Printf.sprintf "Variable %s is already defined" name.id);
-    if not (is_int_type (infer_expr env size)) then
-      type_error name.loc "buffer size must be an integer type";
-    Env.add name.id (Var (Tbuffer (ty, size), true)) env
   | Sdelete id -> type_error id.loc "delete not implemented"
   | Sinput (id, _) -> type_error id.loc "input not implemented"
+;;
 
-let check_program stmts =
-  List.fold_left check_stmt Env.empty stmts
+let check_program stmts = List.fold_left check_stmt Env.empty stmts
