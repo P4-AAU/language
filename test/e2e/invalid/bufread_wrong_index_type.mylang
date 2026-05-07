@@ -1,0 +1,4 @@
+{
+    buffer my_buffer <int32, 5> = [];
+    define y of int32 = bufread(my_buffer, true);
+}

@@ -3,6 +3,7 @@
   #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
+  #include <assert.h>
   
   int main(void)
   {
@@ -15,6 +16,7 @@
   #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
+  #include <assert.h>
   
   int main(void)
   {
@@ -40,6 +42,7 @@
   #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
+  #include <assert.h>
   
   int main(void)
   {
@@ -57,6 +60,7 @@
   #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
+  #include <assert.h>
   
   int main(void)
   {
@@ -72,6 +76,7 @@
   #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
+  #include <assert.h>
   
   int main(void)
   {
@@ -92,11 +97,11 @@
   #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
+  #include <assert.h>
   
   int main(void)
   {
-    int32_t my_buffer_data[128];
-    int my_buffer_len = 0;
+    struct { int32_t data[3]; int32_t len; int32_t cap; } my_buffer = { {1, 2, 3}, 3, 3 };
     return 0;
   }
 
@@ -104,13 +109,15 @@
   #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
+  #include <assert.h>
   
   int main(void)
   {
-    int32_t my_buffer_data[128];
-    int my_buffer_len = 0;
-    static int32_t w1 = my_buffer_data[my_buffer_len++] = 42;
-    static int32_t w2 = my_buffer_data[my_buffer_len++] = 99;
+    struct { int32_t data[5]; int32_t len; int32_t cap; } my_buffer = { {0}, 0, 5 };
+    assert(my_buffer.len < my_buffer.cap);
+    my_buffer.data[my_buffer.len++] = 42;
+    assert(my_buffer.len < my_buffer.cap);
+    my_buffer.data[my_buffer.len++] = 99;
     return 0;
   }
 
@@ -118,13 +125,16 @@
   #include <stdio.h>
   #include <stdint.h>
   #include <math.h>
+  #include <assert.h>
   
   int main(void)
   {
-    int32_t my_buffer_data[128];
-    int my_buffer_len = 0;
-    static int32_t w1 = my_buffer_data[my_buffer_len++] = 42;
-    static int32_t x = my_buffer_data[--my_buffer_len];
+    struct { int32_t data[5]; int32_t len; int32_t cap; } my_buffer = { {0}, 0, 5 };
+    assert(my_buffer.len < my_buffer.cap);
+    my_buffer.data[my_buffer.len++] = 42;
+    assert(my_buffer.len < my_buffer.cap);
+    my_buffer.data[my_buffer.len++] = 99;
+    static int32_t x = (assert(0 >= 0 && 0 < my_buffer.len), my_buffer.data[0]);
     printf("%d\n", x);
     return 0;
   }

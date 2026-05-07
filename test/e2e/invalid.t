@@ -29,24 +29,18 @@ Invalid test: define variable of type integer and set it to 256
   Type error: invalid/undefined_variable.mylang:2:11: unknown variable: x
   [1]
 
-  $ main invalid/bufwriteinvalid.mylang
-  #include <stdio.h>
-  #include <stdint.h>
-  #include <math.h>
-  
-  int main(void)
-  {
-    int32_t buf_data[3];
-    int buf_len = 0;
-    int32_t dummy = 0;
-    dummy = buf_data[buf_len++] = 1;
-    dummy = buf_data[buf_len++] = 2;
-    dummy = buf_data[buf_len++] = 3;
-    dummy = buf_data[buf_len++] = 4;
-    dummy = buf_data[buf_len++] = 5;
-    return 0;
-  }
+  $ main invalid/bufread_nonbuffer.mylang
+  Type error: invalid/bufread_nonbuffer.mylang:3:33: bufread expects a buffer
+  [1]
 
-  $ main invalid/bufreadinvalid.mylang
-  Syntax error at invalid/bufreadinvalid.mylang:9
+  $ main invalid/bufwrite_nonbuffer.mylang
+  Type error: invalid/bufwrite_nonbuffer.mylang:3:14: expected a buffer but got int32
+  [1]
+
+  $ main invalid/bufread_wrong_index_type.mylang
+  Type error: invalid/bufread_wrong_index_type.mylang:3:44: buffer index must be an integer type
+  [1]
+
+  $ main invalid/bufwrite_wrong_type.mylang
+  Type error: invalid/bufwrite_wrong_type.mylang:3:25: type mismatch in bufwrite: expected int32 but got bool
   [1]

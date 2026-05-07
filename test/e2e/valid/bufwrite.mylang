@@ -1,5 +1,5 @@
 {
-    buffer my_buffer: int32 = 128;
-    define w1 of int32 = bufwrite(my_buffer, 42);
-    define w2 of int32 = bufwrite(my_buffer, 99);
+    buffer my_buffer <int32, 5> = [];
+    bufwrite(my_buffer, 42);
+    bufwrite(my_buffer, 99);
 }
