@@ -224,6 +224,19 @@ and compile_stmt buf indent = function
     Buffer.add_string buf ".len++] = ";
     compile_expr buf val_expr;
     Buffer.add_string buf ";\n"
+  | Sassign_index (id, idx_expr, val_expr) ->
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf "assert(";
+    compile_expr buf idx_expr;
+    Buffer.add_string buf " >= 0 && ";
+    compile_expr buf idx_expr;
+    Buffer.add_string buf (Printf.sprintf " < %s.cap);\n" id.id);
+    Buffer.add_string buf (String.make indent ' ');
+    Buffer.add_string buf (Printf.sprintf "%s.data[" id.id);
+    compile_expr buf idx_expr;
+    Buffer.add_string buf "] = ";
+    compile_expr buf val_expr;
+    Buffer.add_string buf ";\n"
   | Sreturn e ->
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "return ";
