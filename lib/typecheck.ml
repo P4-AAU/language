@@ -428,8 +428,6 @@ and check_stmt env stmt =
            (show_typ val_type));
     check_size elem_ty val_expr;
     env
-  | Sdelete id -> type_error id.loc "delete not implemented"
-  | Sinput (id, _) -> type_error id.loc "input not implemented"
 ;;
 
 let check_program stmts = List.fold_left check_stmt Env.empty stmts

@@ -63,7 +63,7 @@ expr:
   | LENGTHOF LP e = expr RP                          { mk_expr $startpos $endpos (Elength e) }
   | LP e = expr RP                                   { e }
   | BUFLEN LP buf = expr RP                                        { mk_expr $startpos $endpos (Ebuflen buf) }
-  | BUFREAD LP buf = expr COMMA idx = expr RP                      { mk_expr $startpos $endpos (Ebufread (buf, idx)) }
+  (*| BUFREAD LP buf = expr COMMA idx = expr RP                      { mk_expr $startpos $endpos (Ebufread (buf, idx)) }*)
   | id = ident LP es = separated_list(COMMA, expr) RP { mk_expr $startpos $endpos (Ecall (id, es))}
 
 block:
@@ -74,7 +74,7 @@ mut_opt:
   | IMUT  { false }
 
 stmt:
-  | DEFINE id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (false, id, ty, e) }
+  | DEFINE id = ident OF ty = type ASSIGN e = expr SEMI { Sbuffer (id, ty, e) }
   | DEFINE m = mut_opt id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (m, id, ty, e) }
   | id = ident ASSIGN e = expr SEMI { Sassign (id, e) }
   | id = ident LBT e1 = expr RBT ASSIGN e2 = expr SEMI { Sassign_index (id, e1, e2) }
@@ -88,10 +88,10 @@ stmt:
   | DELETE id = ident SEMI { Sdelete id }
   | f = func_decl { f }
   | b = block { Sblock b }
-  | BUFFER name = ident LT elem_ty = typ COMMA size = expr GT ASSIGN LBT init = separated_list(COMMA, expr) RBT SEMI
+  (*| BUFFER name = ident LT elem_ty = typ COMMA size = expr GT ASSIGN LBT init = separated_list(COMMA, expr) RBT SEMI
       { Sbuffer (name, Tbuffer (elem_ty, size), init) }
   | BUFWRITE LP buf = expr COMMA value = expr RP SEMI
-      { Sbufwrite (buf, value) }
+      { Sbufwrite (buf, value) }*)
 
 match_case:
   | ps = patterns ARROW s = stmt { (ps, s) }
