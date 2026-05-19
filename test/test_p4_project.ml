@@ -108,8 +108,8 @@ let parse str =
 
 (* define x of int8 = 1 should parse into a Sdefine with name x and type Tint8 *)
 let test_parse_define () =
-  match parse "{ define x of int8 = 1; }" with
-  | [ Sdefine (_, id, Tint8, _) ] -> check string "variable name" "x" id.id
+  match parse "{ define imut x of int8 = 1; }" with
+  | [ Sdefine (false, id, Tint8, _) ] -> check string "variable name" "x" id.id
   | _ -> fail "expected Sdefine with Tint8"
 ;;
 
