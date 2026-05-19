@@ -395,37 +395,17 @@ and check_stmt env stmt =
     check_size elem_ty val_expr;
     env
   | Sassign_index (id, idx_expr, val_expr) ->
-    let t, mut =
-      match
-        try Some (Env.find id.id env) with
-        | Not_found -> None
-      with
-      | None -> type_error id.loc (Printf.sprintf "Variable %s not found" id.id)
-      | Some (Func _) ->
-        type_error id.loc (Printf.sprintf "%s is a function, not a variable" id.id)
-      | Some (Var (t, mut)) -> t, mut
+    let elem_ty, _ =
+      match Env.find_opt id.id env with
+      | Some (Var (Tbuffer (e, n), true)) -> e, n
+      | Some (Var (Tbuffer _, false)) -> type_error id.loc "buffer is immutable"
+      | _ -> type_error id.loc "not a mutable buffer"
     in
-    let elem_ty =
-      match t with
-      | Tbuffer (elem_ty, _) -> elem_ty
-      | _ ->
-        type_error
-          id.loc
-          (Printf.sprintf "expected a buffer but got %s" (show_typ t))
-    in
-    if not mut
-    then type_error id.loc (Printf.sprintf "buffer %s is immutable" id.id);
     if not (is_int_type (infer_expr env idx_expr))
     then type_error idx_expr.expr_loc "buffer index must be an integer type";
     let val_type = infer_expr env val_expr in
-    if not (types_compatible elem_ty val_expr val_type)
-    then
-      type_error
-        val_expr.expr_loc
-        (Printf.sprintf
-           "type mismatch in indexed assign: expected %s but got %s"
-           (show_typ elem_ty)
-           (show_typ val_type));
+    if not (types_compatible elem_ty val_expr val_ty)
+    then type_error val_expr.expr_loc "Type missmatch in indexed write";
     check_size elem_ty val_expr;
     env
 ;;
