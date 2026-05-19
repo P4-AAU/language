@@ -34,6 +34,48 @@ let is_comparable_type = function
   | _ -> false
 ;;
 
+(* Extract a positive integer literal from a buffer's size_expr. *)
+let static_buffer_size size_expr =
+  match size_expr.expr_node with
+  | Ecst (Cint n) when n > 0 -> n
+  | Ecst (Cint _) ->
+    type_error size_expr.expr_loc "buffer size must be greater than 0"
+  | _ -> type_error size_expr.expr_loc "buffer size must be a positive integer literal"
+;;
+
+(* Reject constant indices outside [0, size). Dynamic indices fall through. *)
+let check_static_bounds size_expr idx_expr =
+  let size = static_buffer_size size_expr in
+  match idx_expr.expr_node with
+  | Ecst (Cint i) when i < 0 || i >= size ->
+    type_error
+      idx_expr.expr_loc
+      (Printf.sprintf "buffer index %d out of bounds [0, %d)" i size)
+  | _ -> ()
+;;
+
+(* Validate every Tbuffer occurrence in a type has a static positive size. *)
+let rec validate_typ = function
+  | Tbuffer (elem_ty, size_expr) ->
+    ignore (static_buffer_size size_expr);
+    validate_typ elem_ty
+  | Tarray elem_ty -> validate_typ elem_ty
+  | _ -> ()
+;;
+
+(* Structural type equality with buffers compared by static size value. *)
+let rec typ_equal t1 t2 =
+  match t1, t2 with
+  | Tbuffer (e1, s1), Tbuffer (e2, s2) ->
+    typ_equal e1 e2
+    &&
+      (match s1.expr_node, s2.expr_node with
+       | Ecst (Cint n1), Ecst (Cint n2) -> n1 = n2
+       | _ -> false)
+  | Tarray e1, Tarray e2 -> typ_equal e1 e2
+  | _ -> t1 = t2
+;;
+
 let rec show_typ = function
   | Tint8 -> "int8"
   | Tint16 -> "int16"
@@ -62,7 +104,7 @@ let types_compatible ty expr te =
   match expr.expr_node with
   | Ecst (Cint _) -> is_int_type ty
   | Eunop (Uneg, { expr_node = Ecst (Cint _); _ }) -> is_int_type ty
-  | _ -> te = ty
+  | _ -> typ_equal te ty
 ;;
 
 (*Checks that the value in expr fits into the variable type*)
@@ -149,13 +191,14 @@ let rec infer_expr env expr =
      | Tbuffer _ -> Tint32
      | _ -> type_error expr.expr_loc "buflen expects a buffer")
   | Ebufread (buf_expr, idx_expr) ->
-    let elem_ty =
+    let elem_ty, size_expr =
       match infer_expr env buf_expr with
-      | Tbuffer (elem_ty, _) -> elem_ty
+      | Tbuffer (elem_ty, s) -> elem_ty, s
       | _ -> type_error buf_expr.expr_loc "bufread expects a buffer"
     in
     if not (is_int_type (infer_expr env idx_expr))
     then type_error idx_expr.expr_loc "buffer index must be an integer type";
+    check_static_bounds size_expr idx_expr;
     elem_ty
   | Ecall (id, args) ->
     (match
@@ -246,6 +289,7 @@ and check_stmt env stmt =
   | Sdefine (is_mut, id, ty, expr) ->
     if Env.mem id.id env
     then type_error id.loc (Printf.sprintf "Variable %s is already defined" id.id);
+    validate_typ ty;
     let te = infer_expr env expr in
     if not (types_compatible ty expr te)
     then
@@ -279,6 +323,8 @@ and check_stmt env stmt =
     if Env.mem func_name.id env
     then
       type_error func_name.loc (Printf.sprintf "Function %s already defined" func_name.id);
+    validate_typ func_type;
+    List.iter (fun (_, pt) -> validate_typ pt) params_list;
     let function_scope =
       List.fold_left
         (fun local_env (param_name, param_type) ->
@@ -298,7 +344,7 @@ and check_stmt env stmt =
     if not has_return
     then
       type_error func_name.loc (Printf.sprintf "function %s has no return" func_name.id);
-    if actual_return_type <> func_type
+    if not (typ_equal actual_return_type func_type)
     then type_error func_name.loc "return type does not match function type";
     Env.add
       func_name.id
@@ -395,19 +441,20 @@ and check_stmt env stmt =
     check_size elem_ty val_expr;
     env
   | Sassign_index (id, idx_expr, val_expr) ->
-    let elem_ty, _ =
+    let elem_ty, size_expr =
       match Env.find_opt id.id env with
-      | Some (Var (Tbuffer (e, n), true)) -> e, n
-      | Some (Var (Tbuffer _, false)) -> type_error id.loc "buffer is immutable"
-      | _ -> type_error id.loc "not a mutable buffer"
+      | Some (Var (Tbuffer (e, s), _)) -> e, s
+      | _ -> type_error id.loc "not a buffer"
     in
     if not (is_int_type (infer_expr env idx_expr))
     then type_error idx_expr.expr_loc "buffer index must be an integer type";
+    check_static_bounds size_expr idx_expr;
     let val_type = infer_expr env val_expr in
-    if not (types_compatible elem_ty val_expr val_ty)
+    if not (types_compatible elem_ty val_expr val_type)
     then type_error val_expr.expr_loc "Type missmatch in indexed write";
     check_size elem_ty val_expr;
     env
+  | Sdelete _ | Sinput _ -> env
 ;;
 
 let check_program stmts = List.fold_left check_stmt Env.empty stmts

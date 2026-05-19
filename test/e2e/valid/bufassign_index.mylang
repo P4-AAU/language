@@ -1,4 +1,4 @@
 {
-    buffer my_buffer <int32, 5> = [];
+    define my_buffer of buffer<int32, 5> = [];
     my_buffer[0] = 42;
 }
