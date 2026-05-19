@@ -7,7 +7,7 @@
   
   int main(void)
   {
-    static int8_t x = 1;
+    const int8_t x = 1;
     return 0;
   }
 
@@ -20,7 +20,7 @@
   
   int main(void)
   {
-    static int8_t x = 5;
+    const int8_t x = 5;
     switch (x) {
     case 2:
       printf("%d\n", 2);
@@ -47,12 +47,12 @@
   int main(void)
   {
     int32_t function_plus(int32_t a, int32_t b)  {
-      static int32_t x = 0;
+      const int32_t x = 0;
       return a + b + x;
     }
-    static int32_t x = 10;
-    static int32_t y = 20;
-    static int32_t z = function_plus(x, y);
+    const int32_t x = 10;
+    const int32_t y = 20;
+    const int32_t z = function_plus(x, y);
     return 0;
   }
 
@@ -64,7 +64,7 @@
   
   int main(void)
   {
-    static int32_t x = 10;
+    const int32_t x = 10;
     int32_t y = 20;
     y = 30;
     printf("%d\n", x);
@@ -134,7 +134,7 @@
     my_buffer.data[my_buffer.len++] = 42;
     assert(my_buffer.len < my_buffer.cap);
     my_buffer.data[my_buffer.len++] = 99;
-    static int32_t x = (assert(0 >= 0 && 0 < my_buffer.len), my_buffer.data[0]);
+    const int32_t x = (assert(0 >= 0 && 0 < my_buffer.len), my_buffer.data[0]);
     printf("%d\n", x);
     return 0;
   }
