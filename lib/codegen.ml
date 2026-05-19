@@ -70,14 +70,14 @@ List.iter
     Buffer.add_string buf (compile_binop op);
     Buffer.add_char buf ' ';
     compile_expr buf e2
-  | Ebufread (buf_expr, idx_expr) ->
+  | Eindex (buf_expr, idx_expr) ->
     Buffer.add_string buf "(assert(";
     compile_expr buf idx_expr;
     Buffer.add_string buf " >= 0 && ";
     compile_expr buf idx_expr;
     Buffer.add_string buf " < ";
     compile_expr buf buf_expr;
-    Buffer.add_string buf ".len), ";
+    Buffer.add_string buf ".cap), ";
     compile_expr buf buf_expr;
     Buffer.add_string buf ".data[";
     compile_expr buf idx_expr;

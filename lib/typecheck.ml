@@ -226,7 +226,17 @@ let rec infer_expr env expr =
          param_types
          args;
        ret_type)
-  | Earray _ | Eindex _ | Eslice _ | Elength _ ->
+  | Eindex (buf_expr, idx_expr) ->
+    let elem_ty, size_expr =
+      match infer_expr env buf_expr with
+      | Tbuffer (e, s) -> e, s
+      | _ -> type_error buf_expr.expr_loc "indexed read expects a buffer"
+    in
+    if not (is_int_type (infer_expr env idx_expr))
+    then type_error idx_expr.expr_loc "buffer index must be an integer type";
+    check_static_bounds size_expr idx_expr;
+    elem_ty
+  | Earray _ | Eslice _ | Elength _ ->
     type_error expr.expr_loc "expression type not implemented"
 
 and check_return_in_stmt env loc stmt =
