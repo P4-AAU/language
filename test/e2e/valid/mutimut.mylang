@@ -1,0 +1,7 @@
+{
+    define x of int32 = 10;
+    define mut y of int32 = 20;
+    y = 30;
+    print(x);
+    print(y);
+}

@@ -1,0 +1,4 @@
+{
+    define x of int32 = 10;
+    x = 20;
+}

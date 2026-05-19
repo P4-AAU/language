@@ -1,0 +1,4 @@
+{
+    define x of int32 = 5;
+    bufwrite(x, 42);
+}

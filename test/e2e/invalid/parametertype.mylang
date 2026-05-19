@@ -1,0 +1,6 @@
+{
+    define add of int32(a of int32, b of int32) {
+        return a + b;
+    }
+    add(true, 1);
+}

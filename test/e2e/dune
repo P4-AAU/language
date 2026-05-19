@@ -1,0 +1,5 @@
+(cram
+   (deps
+    %{bin:main}
+    (glob_files valid/*.mylang)
+    (glob_files invalid/*.mylang)))

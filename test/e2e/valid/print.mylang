@@ -1,0 +1,4 @@
+{
+define x of int16 = 42;
+print(x);
+}

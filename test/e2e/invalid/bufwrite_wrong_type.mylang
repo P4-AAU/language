@@ -1,0 +1,4 @@
+{
+    buffer my_buffer <int32, 5> = [];
+    bufwrite(my_buffer, true);
+}
