@@ -1,1 +1,1 @@
-{define x of int8 = 256;}
+{define imut x of int8 = 256;}

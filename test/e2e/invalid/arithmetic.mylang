@@ -1,5 +1,5 @@
 {
-define x of int16 = 1;
-define y of int16 = x + 3;
+define imut x of int16 = 1;
+define imut y of int16 = x + 3;
 print(y);
 }

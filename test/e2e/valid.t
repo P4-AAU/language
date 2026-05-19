@@ -1,4 +1,4 @@
-  $ echo "{define x of int8 = 1;}" > program.mylang
+  $ echo "{define imut x of int8 = 1;}" > program.mylang
   $ main program.mylang
   #include <stdio.h>
   #include <stdint.h>
@@ -114,10 +114,10 @@
   int main(void)
   {
     struct { int32_t data[5]; int32_t len; int32_t cap; } my_buffer = { {0}, 0, 5 };
-    assert(my_buffer.len < my_buffer.cap);
-    my_buffer.data[my_buffer.len++] = 42;
-    assert(my_buffer.len < my_buffer.cap);
-    my_buffer.data[my_buffer.len++] = 99;
+    assert(0 >= 0 && 0 < my_buffer.cap);
+    my_buffer.data[0] = 42;
+    assert(1 >= 0 && 1 < my_buffer.cap);
+    my_buffer.data[1] = 99;
     return 0;
   }
 
@@ -130,11 +130,11 @@
   int main(void)
   {
     struct { int32_t data[5]; int32_t len; int32_t cap; } my_buffer = { {0}, 0, 5 };
-    assert(my_buffer.len < my_buffer.cap);
-    my_buffer.data[my_buffer.len++] = 42;
-    assert(my_buffer.len < my_buffer.cap);
-    my_buffer.data[my_buffer.len++] = 99;
-    static int32_t x = (assert(0 >= 0 && 0 < my_buffer.len), my_buffer.data[0]);
+    assert(0 >= 0 && 0 < my_buffer.cap);
+    my_buffer.data[0] = 42;
+    assert(1 >= 0 && 1 < my_buffer.cap);
+    my_buffer.data[1] = 99;
+    int32_t x = (assert(0 >= 0 && 0 < my_buffer.cap), my_buffer.data[0]);
     printf("%d\n", x);
     return 0;
   }
