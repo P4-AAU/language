@@ -46,8 +46,13 @@ let static_buffer_size size_expr =
 (* Reject constant indices outside [0, size). Dynamic indices fall through. *)
 let check_static_bounds size_expr idx_expr =
   let size = static_buffer_size size_expr in
-  match idx_expr.expr_node with
-  | Ecst (Cint i) when i < 0 || i >= size ->
+  let static_int = function
+    | Ecst (Cint i) -> Some i
+    | Eunop (Uneg, { expr_node = Ecst (Cint i); _ }) -> Some (-i)
+    | _ -> None
+  in
+  match static_int idx_expr.expr_node with
+  | Some i when i < 0 || i >= size ->
     type_error
       idx_expr.expr_loc
       (Printf.sprintf "buffer index %d out of bounds [0, %d)" i size)
