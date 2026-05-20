@@ -210,20 +210,6 @@ and compile_stmt buf indent = function
             compile_expr buf e)
          init_exprs);
     Buffer.add_string buf (Printf.sprintf "}, %d, %d };\n" (List.length init_exprs) n)
-  | Sbufwrite (buf_expr, val_expr) ->
-    Buffer.add_string buf (String.make indent ' ');
-    Buffer.add_string buf "assert(";
-    compile_expr buf buf_expr;
-    Buffer.add_string buf ".len < ";
-    compile_expr buf buf_expr;
-    Buffer.add_string buf ".cap);\n";
-    Buffer.add_string buf (String.make indent ' ');
-    compile_expr buf buf_expr;
-    Buffer.add_string buf ".data[";
-    compile_expr buf buf_expr;
-    Buffer.add_string buf ".len++] = ";
-    compile_expr buf val_expr;
-    Buffer.add_string buf ";\n"
   | Sassign_index (id, idx_expr, val_expr) ->
     Buffer.add_string buf (String.make indent ' ');
     Buffer.add_string buf "assert(";

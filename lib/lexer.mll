@@ -25,8 +25,7 @@
     "match",  MATCH;
     "with",   WITH;
     "to",     TO;
-    "delete", DELETE;
-    "input",  INPUT;
+(*    "delete", DELETE; *)
      "define", DEFINE;
      "of",     OF;
      "int8",   INT8;
@@ -37,11 +36,8 @@
      "uint32", UINT32;
      "bool",   BOOL;
      "string", STRING;
-     "array",  ARRAY;
      "buffer", BUFFER;
      "buflen", BUFLEN;
-     "bufread", BUFREAD;
-     "bufwrite", BUFWRITE;
      "sqrt",   SQRT;
      "for",    FOR;
      "in",     IN;

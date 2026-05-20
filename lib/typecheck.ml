@@ -190,16 +190,6 @@ let rec infer_expr env expr =
     (match infer_expr env e with
      | Tbuffer _ -> Tint32
      | _ -> type_error expr.expr_loc "buflen expects a buffer")
-  | Ebufread (buf_expr, idx_expr) ->
-    let elem_ty, size_expr =
-      match infer_expr env buf_expr with
-      | Tbuffer (elem_ty, s) -> elem_ty, s
-      | _ -> type_error buf_expr.expr_loc "bufread expects a buffer"
-    in
-    if not (is_int_type (infer_expr env idx_expr))
-    then type_error idx_expr.expr_loc "buffer index must be an integer type";
-    check_static_bounds size_expr idx_expr;
-    elem_ty
   | Ecall (id, args) ->
     (match
        try Some (Env.find id.id env) with
@@ -267,9 +257,7 @@ and check_return_in_stmt env loc stmt =
   | Sfor _
   | Smatch _
   | Sbuffer _
-  | Sbufwrite _
   | Sdelete _
-  | Sinput _
   | Sforrange _
   | Sassign_index _
   | Sfunc _ -> false, Tint32
@@ -430,26 +418,6 @@ and check_stmt env stmt =
          check_size elem_ty e)
       init_exprs;
     Env.add name.id (Var (buf_ty, true)) env
-  | Sbufwrite (buf_expr, val_expr) ->
-    let elem_ty =
-      match infer_expr env buf_expr with
-      | Tbuffer (elem_ty, _) -> elem_ty
-      | t ->
-        type_error
-          buf_expr.expr_loc
-          (Printf.sprintf "expected a buffer but got %s" (show_typ t))
-    in
-    let val_type = infer_expr env val_expr in
-    if not (types_compatible elem_ty val_expr val_type)
-    then
-      type_error
-        val_expr.expr_loc
-        (Printf.sprintf
-           "type mismatch in bufwrite: expected %s but got %s"
-           (show_typ elem_ty)
-           (show_typ val_type));
-    check_size elem_ty val_expr;
-    env
   | Sassign_index (id, idx_expr, val_expr) ->
     let elem_ty, size_expr =
       match Env.find_opt id.id env with
@@ -464,7 +432,7 @@ and check_stmt env stmt =
     then type_error val_expr.expr_loc "Type missmatch in indexed write";
     check_size elem_ty val_expr;
     env
-  | Sdelete _ | Sinput _ -> env
+  | Sdelete _ -> env
 ;;
 
 let check_program stmts = List.fold_left check_stmt Env.empty stmts
