@@ -25,7 +25,7 @@
     "match",  MATCH;
     "with",   WITH;
     "to",     TO;
-(*    "delete", DELETE; *)
+    "delete", DELETE;
      "define", DEFINE;
      "of",     OF;
      "int8",   INT8;
@@ -38,6 +38,8 @@
      "string", STRING;
      "buffer", BUFFER;
      "buflen", BUFLEN;
+     "append", APPEND;
+     "pop", POP;
      "sqrt",   SQRT;
      "for",    FOR;
      "in",     IN;
@@ -88,6 +90,7 @@ rule token = parse
  | ":"       {COLON}
  | ";"       {SEMI}
  | ","       {COMMA}
+ | "."       {DOT}
  | eof       {EOF}
  | _ as c    {raise (Lexing_error (Printf.sprintf "unexpected character: %c" c))}
 
