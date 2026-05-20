@@ -7,13 +7,13 @@
 
 %token <string> IDENT
 %token <Ast.constant> CST
-%token DEFINE OF TO FOR IN IF ELSE PRINT MATCH WITH RETURN LENGTHOF DELETE
+%token DEFINE OF TO FOR IN IF ELSE PRINT MATCH WITH RETURN LENGTHOF DELETE APPEND POP
 %token AND OR NOT
 %token PLUS MINUS TIMES DIV MOD POW SQRT
 %token EQ NEQ LT LEQ GT GEQ
 %token ASSIGN
 %token LP RP LCURLY RCURLY LBT RBT
-%token COLON COMMA SEMI ARROW
+%token COLON COMMA SEMI ARROW DOT
 %token EOF
 %token INT8 INT16 INT32
 %token UINT8 UINT16 UINT32
@@ -85,6 +85,8 @@ stmt:
   | MATCH e = expr WITH cs = nonempty_list(match_case) { Smatch (e, cs) }
   | RETURN e = expr SEMI { Sreturn e }
   | DELETE id = ident SEMI { Sdelete id }
+  | id = ident DOT POP SEMI{ Spop id }
+  | id = ident DOT APPEND LP e = expr RP SEMI{ Sappend (id,e)}
   | f = func_decl { f }
   | b = block { Sblock b }
 

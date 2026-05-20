@@ -79,6 +79,8 @@ type stmt =
   | Sassign_index of ident * expr * expr
   | Smatch of expr * (pattern * stmt) list
   | Sbuffer of ident * typ * expr list (* name, Buffer(τ,n) type, init values *)
+  | Sappend of ident * expr
+  | Spop of ident
   | Sdelete of ident
   | Sforrange of ident * expr * expr * stmt
 

@@ -38,8 +38,7 @@ let is_comparable_type = function
 let static_buffer_size size_expr =
   match size_expr.expr_node with
   | Ecst (Cint n) when n > 0 -> n
-  | Ecst (Cint _) ->
-    type_error size_expr.expr_loc "buffer size must be greater than 0"
+  | Ecst (Cint _) -> type_error size_expr.expr_loc "buffer size must be greater than 0"
   | _ -> type_error size_expr.expr_loc "buffer size must be a positive integer literal"
 ;;
 
@@ -75,8 +74,8 @@ let rec typ_equal t1 t2 =
     typ_equal e1 e2
     &&
       (match s1.expr_node, s2.expr_node with
-       | Ecst (Cint n1), Ecst (Cint n2) -> n1 = n2
-       | _ -> false)
+      | Ecst (Cint n1), Ecst (Cint n2) -> n1 = n2
+      | _ -> false)
   | Tarray e1, Tarray e2 -> typ_equal e1 e2
   | _ -> t1 = t2
 ;;
@@ -424,7 +423,7 @@ and check_stmt env stmt =
       init_exprs;
     Env.add name.id (Var (buf_ty, true)) env
   | Sassign_index (id, idx_expr, val_expr) ->
-    let elem_ty, size_expr =
+    let buffer_ty, buffer_size_expr =
       match Env.find_opt id.id env with
       | Some (Var (Tbuffer (e, s), _)) -> e, s
       | _ -> type_error id.loc "not a buffer"
@@ -437,6 +436,23 @@ and check_stmt env stmt =
     then type_error val_expr.expr_loc "Type missmatch in indexed write";
     check_size elem_ty val_expr;
     env
+  | Sappend (id, value_expr) ->
+    let buffer_ty, buffer_size_expr =
+      match Env.find_opt id.id env with
+      | Some (Var (Tbuffer (ty, size), _)) -> ty, size
+      | _ -> type_error id.loc "%s not of type buffer" id.id
+    in
+    let value_ty = infer_expr env value_expr in
+    if not (types_compatible buffer_ty value_expr value_ty)
+    then
+      type_error value_expr.expr_loc "Input of type %s expectedtype %s" value_ty buffer_ty;
+    check_size buffer_ty value_expr;
+    env
+  | Spop id ->
+    (match Env.find_opt id.id env with
+     | Some (Var (Tbuffer (_, _), _)) -> ()
+     | _ -> type_error id.loc "%s not of type buffer" id.id)
+      env
   | Sdelete _ -> env
 ;;
 
