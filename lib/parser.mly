@@ -7,19 +7,19 @@
 
 %token <string> IDENT
 %token <Ast.constant> CST
-%token DEFINE OF TO FOR IN IF ELSE PRINT MATCH WITH RETURN LENGTHOF DELETE INPUT
+%token DEFINE OF TO FOR IN IF ELSE PRINT MATCH WITH RETURN LENGTHOF DELETE
 %token AND OR NOT
 %token PLUS MINUS TIMES DIV MOD POW SQRT
 %token EQ NEQ LT LEQ GT GEQ
 %token ASSIGN
 %token LP RP LCURLY RCURLY LBT RBT
-%token COLON COMMA SEMI FACCES ARROW
+%token COLON COMMA SEMI ARROW
 %token EOF
 %token INT8 INT16 INT32
 %token UINT8 UINT16 UINT32
-%token BOOL ARRAY STRING BUFFER
+%token BOOL STRING BUFFER
 %token MUT IMUT
-%token BUFLEN BUFREAD BUFWRITE
+%token BUFLEN
 
 /* Precedence - lavest øverst, højest nederst */
 %left OR
@@ -63,7 +63,6 @@ expr:
   | LENGTHOF LP e = expr RP                          { mk_expr $startpos $endpos (Elength e) }
   | LP e = expr RP                                   { e }
   | BUFLEN LP buf = expr RP                                        { mk_expr $startpos $endpos (Ebuflen buf) }
-  | BUFREAD LP buf = expr COMMA idx = expr RP                      { mk_expr $startpos $endpos (Ebufread (buf, idx)) }
   | id = ident LP es = separated_list(COMMA, expr) RP { mk_expr $startpos $endpos (Ecall (id, es))}
 
 block:
@@ -74,7 +73,8 @@ mut_opt:
   | IMUT  { false }
 
 stmt:
-  | DEFINE id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (false, id, ty, e) }
+  | DEFINE id = ident OF BUFFER LT elem_ty = typ COMMA size = expr GT ASSIGN LBT init = separated_list(COMMA, expr) RBT SEMI
+      { Sbuffer (id, Tbuffer (elem_ty, size), init) }
   | DEFINE m = mut_opt id = ident OF ty = typ ASSIGN e = expr SEMI { Sdefine (m, id, ty, e) }
   | id = ident ASSIGN e = expr SEMI { Sassign (id, e) }
   | id = ident LBT e1 = expr RBT ASSIGN e2 = expr SEMI { Sassign_index (id, e1, e2) }
@@ -84,14 +84,9 @@ stmt:
   | FOR id = ident IN e1 = expr TO e2 = expr b = block { Sforrange (id, e1, e2, Sblock b) }
   | MATCH e = expr WITH cs = nonempty_list(match_case) { Smatch (e, cs) }
   | RETURN e = expr SEMI { Sreturn e }
-  | INPUT id = ident COLON ty = typ SEMI { Sinput (id, ty) }
   | DELETE id = ident SEMI { Sdelete id }
   | f = func_decl { f }
   | b = block { Sblock b }
-  | BUFFER name = ident LT elem_ty = typ COMMA size = expr GT ASSIGN LBT init = separated_list(COMMA, expr) RBT SEMI
-      { Sbuffer (name, Tbuffer (elem_ty, size), init) }
-  | BUFWRITE LP buf = expr COMMA value = expr RP SEMI
-      { Sbufwrite (buf, value) }
 
 match_case:
   | ps = patterns ARROW s = stmt { (ps, s) }
@@ -111,7 +106,7 @@ patterns:
     }
 
 %inline binop:
-  | PLUS  { Badd } 
+  | PLUS  { Badd }
   | MINUS { Bsub }
   | TIMES { Bmul }
   | DIV { Bdiv }

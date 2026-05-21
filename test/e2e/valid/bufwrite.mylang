@@ -1,5 +1,5 @@
 {
-    buffer my_buffer <int32, 5> = [];
-    bufwrite(my_buffer, 42);
-    bufwrite(my_buffer, 99);
+    define my_buffer of buffer<int32, 5> = [];
+    my_buffer[0] = 42;
+    my_buffer[1] = 99;
 }

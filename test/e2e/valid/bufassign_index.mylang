@@ -1,4 +1,4 @@
 {
     define my_buffer of buffer<int32, 5> = [];
-    define mut y of int32 = my_buffer[true];
+    my_buffer[0] = 42;
 }

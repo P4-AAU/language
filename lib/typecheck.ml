@@ -34,6 +34,53 @@ let is_comparable_type = function
   | _ -> false
 ;;
 
+(* Extract a positive integer literal from a buffer's size_expr. *)
+let static_buffer_size size_expr =
+  match size_expr.expr_node with
+  | Ecst (Cint n) when n > 0 -> n
+  | Ecst (Cint _) ->
+    type_error size_expr.expr_loc "buffer size must be greater than 0"
+  | _ -> type_error size_expr.expr_loc "buffer size must be a positive integer literal"
+;;
+
+(* Reject constant indices outside [0, size). Dynamic indices fall through. *)
+let check_static_bounds size_expr idx_expr =
+  let size = static_buffer_size size_expr in
+  let static_int = function
+    | Ecst (Cint i) -> Some i
+    | Eunop (Uneg, { expr_node = Ecst (Cint i); _ }) -> Some (-i)
+    | _ -> None
+  in
+  match static_int idx_expr.expr_node with
+  | Some i when i < 0 || i >= size ->
+    type_error
+      idx_expr.expr_loc
+      (Printf.sprintf "buffer index %d out of bounds [0, %d)" i size)
+  | _ -> ()
+;;
+
+(* Validate every Tbuffer occurrence in a type has a static positive size. *)
+let rec validate_typ = function
+  | Tbuffer (elem_ty, size_expr) ->
+    ignore (static_buffer_size size_expr);
+    validate_typ elem_ty
+  | Tarray elem_ty -> validate_typ elem_ty
+  | _ -> ()
+;;
+
+(* Structural type equality with buffers compared by static size value. *)
+let rec typ_equal t1 t2 =
+  match t1, t2 with
+  | Tbuffer (e1, s1), Tbuffer (e2, s2) ->
+    typ_equal e1 e2
+    &&
+      (match s1.expr_node, s2.expr_node with
+       | Ecst (Cint n1), Ecst (Cint n2) -> n1 = n2
+       | _ -> false)
+  | Tarray e1, Tarray e2 -> typ_equal e1 e2
+  | _ -> t1 = t2
+;;
+
 let rec show_typ = function
   | Tint8 -> "int8"
   | Tint16 -> "int16"
@@ -62,7 +109,7 @@ let types_compatible ty expr te =
   match expr.expr_node with
   | Ecst (Cint _) -> is_int_type ty
   | Eunop (Uneg, { expr_node = Ecst (Cint _); _ }) -> is_int_type ty
-  | _ -> te = ty
+  | _ -> typ_equal te ty
 ;;
 
 (*Checks that the value in expr fits into the variable type*)
@@ -148,15 +195,6 @@ let rec infer_expr env expr =
     (match infer_expr env e with
      | Tbuffer _ -> Tint32
      | _ -> type_error expr.expr_loc "buflen expects a buffer")
-  | Ebufread (buf_expr, idx_expr) ->
-    let elem_ty =
-      match infer_expr env buf_expr with
-      | Tbuffer (elem_ty, _) -> elem_ty
-      | _ -> type_error buf_expr.expr_loc "bufread expects a buffer"
-    in
-    if not (is_int_type (infer_expr env idx_expr))
-    then type_error idx_expr.expr_loc "buffer index must be an integer type";
-    elem_ty
   | Ecall (id, args) ->
     (match
        try Some (Env.find id.id env) with
@@ -183,7 +221,17 @@ let rec infer_expr env expr =
          param_types
          args;
        ret_type)
-  | Earray _ | Eindex _ | Eslice _ | Elength _ ->
+  | Eindex (buf_expr, idx_expr) ->
+    let elem_ty, size_expr =
+      match infer_expr env buf_expr with
+      | Tbuffer (e, s) -> e, s
+      | _ -> type_error buf_expr.expr_loc "indexed read expects a buffer"
+    in
+    if not (is_int_type (infer_expr env idx_expr))
+    then type_error idx_expr.expr_loc "buffer index must be an integer type";
+    check_static_bounds size_expr idx_expr;
+    elem_ty
+  | Earray _ | Eslice _ | Elength _ ->
     type_error expr.expr_loc "expression type not implemented"
 
 and check_return_in_stmt env loc stmt =
@@ -214,9 +262,7 @@ and check_return_in_stmt env loc stmt =
   | Sfor _
   | Smatch _
   | Sbuffer _
-  | Sbufwrite _
   | Sdelete _
-  | Sinput _
   | Sforrange _
   | Sassign_index _
   | Sfunc _ -> false, Tint32
@@ -246,6 +292,7 @@ and check_stmt env stmt =
   | Sdefine (is_mut, id, ty, expr) ->
     if Env.mem id.id env
     then type_error id.loc (Printf.sprintf "Variable %s is already defined" id.id);
+    validate_typ ty;
     let te = infer_expr env expr in
     if not (types_compatible ty expr te)
     then
@@ -279,6 +326,8 @@ and check_stmt env stmt =
     if Env.mem func_name.id env
     then
       type_error func_name.loc (Printf.sprintf "Function %s already defined" func_name.id);
+    validate_typ func_type;
+    List.iter (fun (_, pt) -> validate_typ pt) params_list;
     let function_scope =
       List.fold_left
         (fun local_env (param_name, param_type) ->
@@ -298,7 +347,7 @@ and check_stmt env stmt =
     if not has_return
     then
       type_error func_name.loc (Printf.sprintf "function %s has no return" func_name.id);
-    if actual_return_type <> func_type
+    if not (typ_equal actual_return_type func_type)
     then type_error func_name.loc "return type does not match function type";
     Env.add
       func_name.id
@@ -374,29 +423,21 @@ and check_stmt env stmt =
          check_size elem_ty e)
       init_exprs;
     Env.add name.id (Var (buf_ty, true)) env
-  | Sbufwrite (buf_expr, val_expr) ->
-    let elem_ty =
-      match infer_expr env buf_expr with
-      | Tbuffer (elem_ty, _) -> elem_ty
-      | t ->
-        type_error
-          buf_expr.expr_loc
-          (Printf.sprintf "expected a buffer but got %s" (show_typ t))
+  | Sassign_index (id, idx_expr, val_expr) ->
+    let elem_ty, size_expr =
+      match Env.find_opt id.id env with
+      | Some (Var (Tbuffer (e, s), _)) -> e, s
+      | _ -> type_error id.loc "not a buffer"
     in
+    if not (is_int_type (infer_expr env idx_expr))
+    then type_error idx_expr.expr_loc "buffer index must be an integer type";
+    check_static_bounds size_expr idx_expr;
     let val_type = infer_expr env val_expr in
     if not (types_compatible elem_ty val_expr val_type)
-    then
-      type_error
-        val_expr.expr_loc
-        (Printf.sprintf
-           "type mismatch in bufwrite: expected %s but got %s"
-           (show_typ elem_ty)
-           (show_typ val_type));
+    then type_error val_expr.expr_loc "Type missmatch in indexed write";
     check_size elem_ty val_expr;
     env
-  | Sassign_index (id, _, _) -> type_error id.loc "assign index not implemented"
-  | Sdelete id -> type_error id.loc "delete not implemented"
-  | Sinput (id, _) -> type_error id.loc "input not implemented"
+  | Sdelete _ -> env
 ;;
 
 let check_program stmts = List.fold_left check_stmt Env.empty stmts
