@@ -15,7 +15,7 @@
      S-IfTrue, S-IfFalse, S-WhileFalse, S-WhileTrue
      B-Decl, B-Write, B-Write-OOB, B-Read, B-Read-OOB            *)
 
-From Stdlib Require Import String List Bool ZArith Lia.
+Require Import String List Bool ZArith Lia.
 Import ListNotations.
 Open Scope string_scope.
 
@@ -249,22 +249,20 @@ Fixpoint list_update (xs : list Z) (i : nat) (v : Z) : list Z :=
 (*  Report rule name prefixes: S- (general), B- (buffer)               *)
 (* ================================================================== *)
 
-Reserved Notation "E ',' M '|-' s '↠' E'" (at level 50, s at next level).
-
 Inductive exec : env -> menv -> stmt -> env -> Prop :=
 
   (* ── S-Skip ──────────────────────────────────────────────────────── *)
   | Ex_Skip : forall E M,
-      E , M |- Skip ↠ E
+      exec E M Skip E
 
   (* ── S-Assign: mutable variable ─────────────────────────────────── *)
   (*  E ⊢ e ↠ v    M(x) = true                                        *)
   (*  ──────────────────────────────                                    *)
   (*  E ⊢ x = e ↠ E[x ↦ v]                                            *)
   | Ex_Assign : forall E M x a n,
-      E |- a ↠ n ->
+      aeval E a n ->
       M x = true ->
-      E , M |- Assign x a ↠ update E x (VNum n)
+      exec E M (Assign x a) (update E x (VNum n))
 
   (* ── S-Assign-Immut: immutable variable — assignment is an error ── *)
   (*  M(x) = false                                                      *)
@@ -272,37 +270,37 @@ Inductive exec : env -> menv -> stmt -> env -> Prop :=
   (*  E ⊢ x = e ↠ E[x ↦ VError]                                       *)
   | Ex_AssignImmut : forall E M x a,
       M x = false ->
-      E , M |- Assign x a ↠ update E x VError
+      exec E M (Assign x a) (update E x VError)
 
   (* ── S-Seq ───────────────────────────────────────────────────────── *)
   | Ex_Seq : forall E E1 E2 M s1 s2,
-      E  , M |- s1 ↠ E1 ->
-      E1 , M |- s2 ↠ E2 ->
-      E  , M |- Seq s1 s2 ↠ E2
+      exec E  M s1 E1 ->
+      exec E1 M s2 E2 ->
+      exec E  M (Seq s1 s2) E2
 
   (* ── S-IfTrue ────────────────────────────────────────────────────── *)
   | Ex_IfTrue : forall E E' M b s1 s2,
-      E ||- b ↠ true ->
-      E , M |- s1 ↠ E' ->
-      E , M |- If b s1 s2 ↠ E'
+      beval E b true ->
+      exec E M s1 E' ->
+      exec E M (If b s1 s2) E'
 
   (* ── S-IfFalse ───────────────────────────────────────────────────── *)
   | Ex_IfFalse : forall E E' M b s1 s2,
-      E ||- b ↠ false ->
-      E , M |- s2 ↠ E' ->
-      E , M |- If b s1 s2 ↠ E'
+      beval E b false ->
+      exec E M s2 E' ->
+      exec E M (If b s1 s2) E'
 
   (* ── S-WhileFalse ────────────────────────────────────────────────── *)
   | Ex_WhileFalse : forall E M b s,
-      E ||- b ↠ false ->
-      E , M |- While b s ↠ E
+      beval E b false ->
+      exec E M (While b s) E
 
   (* ── S-WhileTrue ─────────────────────────────────────────────────── *)
   | Ex_WhileTrue : forall E E1 E2 M b s,
-      E ||- b ↠ true ->
-      E  , M |- s           ↠ E1 ->
-      E1 , M |- While b s   ↠ E2 ->
-      E  , M |- While b s   ↠ E2
+      beval E b true ->
+      exec E  M s           E1 ->
+      exec E1 M (While b s) E2 ->
+      exec E  M (While b s) E2
 
   (* ── B-Decl ──────────────────────────────────────────────────────── *)
   (*  n > 0    |as| ≤ n    ∀ aᵢ ∈ as: E ⊢ aᵢ ↠ vᵢ                   *)
@@ -312,7 +310,7 @@ Inductive exec : env -> menv -> stmt -> env -> Prop :=
       n > 0 ->
       length aes <= n ->
       aeval_list E aes vs ->
-      E , M |- BufDecl x n aes ↠ update E x (VBuf n vs)
+      exec E M (BufDecl x n aes) (update E x (VBuf n vs))
 
   (* ── B-Write (in-bounds) ─────────────────────────────────────────── *)
   (*  E(x) = VBuf n xs    E ⊢ i ↠ v    0 ≤ v < n    E ⊢ e ↠ val      *)
@@ -320,10 +318,10 @@ Inductive exec : env -> menv -> stmt -> env -> Prop :=
   (*  E ⊢ x[i] = e  ↠  E[x ↦ VBuf n (xs[v ← val])]                  *)
   | Ex_BufWrite : forall E M x n xs a_i a_e (v : nat) val,
       E x = VBuf n xs ->
-      E |- a_i ↠ Z.of_nat v ->
+      aeval E a_i (Z.of_nat v) ->
       v < n ->
-      E |- a_e ↠ val ->
-      E , M |- BufWrite x a_i a_e ↠ update E x (VBuf n (list_update xs v val))
+      aeval E a_e val ->
+      exec E M (BufWrite x a_i a_e) (update E x (VBuf n (list_update xs v val)))
 
   (* ── B-Write-OOB ─────────────────────────────────────────────────── *)
   (*  E(x) = VBuf n xs    E ⊢ i ↠ v    v ≥ n                          *)
@@ -331,9 +329,9 @@ Inductive exec : env -> menv -> stmt -> env -> Prop :=
   (*  E ⊢ x[i] = e  ↠  E[x ↦ VError]                                 *)
   | Ex_BufWriteOOB : forall E M x n xs a_i a_e (v : nat),
       E x = VBuf n xs ->
-      E |- a_i ↠ Z.of_nat v ->
+      aeval E a_i (Z.of_nat v) ->
       n <= v ->
-      E , M |- BufWrite x a_i a_e ↠ update E x VError
+      exec E M (BufWrite x a_i a_e) (update E x VError)
 
   (* ── B-Read (in-bounds) ──────────────────────────────────────────── *)
   (*  E(x) = VBuf n xs    E ⊢ i ↠ v    0 ≤ v < n                      *)
@@ -341,10 +339,10 @@ Inductive exec : env -> menv -> stmt -> env -> Prop :=
   (*  E ⊢ z = x[i]  ↠  E[z ↦ xs[v]]                                  *)
   | Ex_BufRead : forall E M x n xs a_i (v : nat) z r,
       E x = VBuf n xs ->
-      E |- a_i ↠ Z.of_nat v ->
+      aeval E a_i (Z.of_nat v) ->
       v < n ->
       nth_error xs v = Some r ->
-      E , M |- BufRead x a_i z ↠ update E z (VNum r)
+      exec E M (BufRead x a_i z) (update E z (VNum r))
 
   (* ── B-Read-OOB ──────────────────────────────────────────────────── *)
   (*  E(x) = VBuf n xs    E ⊢ i ↠ v    v ≥ n                          *)
@@ -352,11 +350,13 @@ Inductive exec : env -> menv -> stmt -> env -> Prop :=
   (*  E ⊢ z = x[i]  ↠  E[z ↦ VError]                                 *)
   | Ex_BufReadOOB : forall E M x n xs a_i (v : nat) z,
       E x = VBuf n xs ->
-      E |- a_i ↠ Z.of_nat v ->
+      aeval E a_i (Z.of_nat v) ->
       n <= v ->
-      E , M |- BufRead x a_i z ↠ update E z VError
+      exec E M (BufRead x a_i z) (update E z VError).
 
-where "E ',' M '|-' s '↠' E'" := (exec E M s E').
+Notation "E ',' M '|-' s '↠' F" :=
+  (exec E M s F)
+  (at level 50, M at level 0, s at next level, F at level 200).
 
 (* ================================================================== *)
 (*  Example Proofs                                                      *)
@@ -477,9 +477,9 @@ Qed.
 Example Negation_Example :
   empty_env , all_mut |-
     Assign "z" (ANeg (ANum 5%Z))
-  ↠ update empty_env "z" (VNum (-5)%Z).
+  ↠ update empty_env "z" (VNum (- 5)%Z).
 Proof.
   apply Ex_Assign.
-  - apply E_ANeg. apply E_ANum.
+  - apply (E_ANeg _ _ 5%Z). apply E_ANum.
   - reflexivity.
 Qed.
